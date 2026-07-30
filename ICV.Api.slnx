@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ICV.Api/ICV.Api.csproj" />
+  <Project Path="ICV.Application/ICV.Application.csproj" />
+  <Project Path="ICV.Domain/ICV.Domain.csproj" />
+  <Project Path="ICV.Infrastructure/ICV.Infrastructure.csproj" />
+  <Project Path="ICV.Shared/ICV.Shared.csproj" />
+</Solution>
