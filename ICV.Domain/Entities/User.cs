@@ -15,6 +15,7 @@ namespace ICV.Domain.Entities
         public string FullName {  get; set; } = string.Empty;
         public string PreferredLanguage { get; set; } = "en"; // varsayılan ingilizce olacak 
 
+        // Bu kullanıcıya ait tüm CV'ler.
         public ICollection<Cv> Cvs { get; set; } = new List<Cv>();
 
     }
