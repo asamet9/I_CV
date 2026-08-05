@@ -9,7 +9,7 @@ using ICV.Domain.Enums;
 
 namespace ICV.Domain.Entities
 {
-    public class CourseRecommendation
+    public class CourseRecommendation : BaseEntity
     {
 
         // Bu kurs önerisi hangi yetenek önerisine ait?

@@ -9,7 +9,7 @@ using ICV.Domain.Enums;
 
 namespace ICV.Domain.Entities
 {
-    public class UserSkillProgress
+    public class UserSkillProgress : BaseEntity
     {
 
         // Hangi kullanıcı?

@@ -37,5 +37,8 @@ namespace ICV.Domain.Entities
         public ICollection<CourseRecommendation> CourseRecommendations { get; set; }
             = new List<CourseRecommendation>();
 
+        public ICollection<UserSkillProgress> UserSkillProgresses { get; set; }
+    = new List<UserSkillProgress>();
+
     }
 }

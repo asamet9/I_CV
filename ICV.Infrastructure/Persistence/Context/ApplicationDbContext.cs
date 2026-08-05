@@ -20,16 +20,33 @@ namespace ICV.Infrastructure.Persistence.Context
         }
         //^ Bu satır sayesinde Program.cs içinde SQL Server bağlantısını vereceğiz.
 
-        public DbSet<User> Users => Set<User>();
-        public DbSet<Profession> Professions => Set<Profession>();
-         public DbSet<QuestionTemplate> QuestionTemplates => Set<QuestionTemplate>(); // QuestionTemplates tablosunu temsil eder.
+        public DbSet<User> Users { get; set; }
 
-        public DbSet<Cv> Cvs => Set<Cv>();
+        public DbSet<Profession> Professions { get; set; }
 
-        public DbSet<CvSection> CvSections => Set<CvSection>();
+        public DbSet<Cv> Cvs { get; set; }
 
-        public DbSet<CvSectionItem> CvSectionItems => Set<CvSectionItem>();
+        public DbSet<CvSection> CvSections { get; set; }
 
-        public DbSet<SkillSuggestion> SkillSuggestions => Set<SkillSuggestion>();
+        public DbSet<CvSectionItem> CvSectionItems { get; set; }
+
+        public DbSet<SkillSuggestion> SkillSuggestions { get; set; }
+
+        public DbSet<CourseRecommendation> CourseRecommendations { get; set; }
+
+        public DbSet<QuestionTemplate> QuestionTemplates { get; set; }
+
+        public DbSet<UserSkillProgress> UserSkillProgresses { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder) //Bu metodu EF Core, veritabanı modelini oluştururken otomatik çağırır.
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly); //"ApplicationDbContext'in bulunduğu projedeki bütün IEntityTypeConfiguration<> sınıflarını bul ve uygula."
+
+
+        }
+
+
     }
 }

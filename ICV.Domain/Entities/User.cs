@@ -18,5 +18,8 @@ namespace ICV.Domain.Entities
         // Bu kullanıcıya ait tüm CV'ler.
         public ICollection<Cv> Cvs { get; set; } = new List<Cv>();
 
+        public ICollection<UserSkillProgress> SkillProgresses { get; set; }
+    = new List<UserSkillProgress>();
+
     }
 }
