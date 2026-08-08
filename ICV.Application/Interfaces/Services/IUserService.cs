@@ -15,5 +15,13 @@ namespace ICV.Application.Interfaces.Services
 
         Task<UserResponseDto> RegisterAsync(RegisterRequestDto request);
 
+        Task<IEnumerable<UserResponseDto>> GetAllAsync();
+
+        Task<UserResponseDto?> GetByIdAsync(int id);
+
+        Task<UserResponseDto?> UpdateAsync(int id, UpdateUserRequestDto request);
+
+        Task<bool> DeleteAsync(int id);
+
     }
 }

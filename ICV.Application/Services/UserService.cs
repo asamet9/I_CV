@@ -14,6 +14,80 @@ namespace ICV.Application.Services
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+
+            if (user == null)
+                return false;
+
+            _unitOfWork.Users.Delete(user);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+
+
+        public async Task<UserResponseDto?> UpdateAsync(
+    int id,
+    UpdateUserRequestDto request)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+
+            if (user == null)
+                return null;
+
+            user.Email = request.Email;
+            user.FullName = request.FullName;
+            user.PreferredLanguage = request.PreferredLanguage;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Users.Update(user);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return new UserResponseDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                PreferredLanguage = user.PreferredLanguage
+            };
+        }
+
+
+        public async Task<UserResponseDto?> GetByIdAsync(int id)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+
+            if (user == null)
+                return null;
+
+            return new UserResponseDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                PreferredLanguage = user.PreferredLanguage
+            };
+        }
+
+        public async Task<IEnumerable<UserResponseDto>> GetAllAsync()
+        {
+            var users = await _unitOfWork.Users.GetAllAsync();
+
+            return users.Select(user => new UserResponseDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                PreferredLanguage = user.PreferredLanguage
+            });
+        }
+
+
         public async Task<UserResponseDto> RegisterAsync(RegisterRequestDto request)
         {
             // Aynı email ile daha önce kayıt olunmuş mu?
@@ -53,6 +127,7 @@ namespace ICV.Application.Services
                 FullName = user.FullName,
                 PreferredLanguage = user.PreferredLanguage
             };
+
         }
     }
 }
