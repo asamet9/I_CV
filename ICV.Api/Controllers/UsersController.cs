@@ -1,7 +1,9 @@
 ﻿using ICV.Application.DTOs.User;
 using ICV.Application.Interfaces.Services;
-
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
+using System.Security.Claims;
 
 namespace ICV.Api.Controllers
 {
@@ -67,7 +69,34 @@ namespace ICV.Api.Controllers
             return NoContent();
         }
 
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginRequestDto request)
+        {
+            var user = await _userService.LoginAsync(request);
 
+            if (user == null)
+                return Unauthorized("Email veya şifre hatalı.");
+
+            return Ok(user);
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        public IActionResult GetMe()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            var fullName = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            return Ok(new
+            {
+                UserId = userId,
+                Email = email,
+                FullName = fullName
+            });
+        }
 
     }
 }

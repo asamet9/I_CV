@@ -23,5 +23,9 @@ namespace ICV.Application.Interfaces.Services
 
         Task<bool> DeleteAsync(int id);
 
+        
+        //Login DTO
+        Task<LoginResponseDto?> LoginAsync(LoginRequestDto request);
+
     }
 }

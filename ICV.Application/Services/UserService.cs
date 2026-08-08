@@ -8,11 +8,48 @@ namespace ICV.Application.Services
     public class UserService : IUserService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IJwtService _jwtService;
 
-        public UserService(IUnitOfWork unitOfWork)
+
+        public UserService(IUnitOfWork unitOfWork, IJwtService jwtService)
         {
+            _jwtService = jwtService;
             _unitOfWork = unitOfWork;
         }
+
+        public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
+        {
+            var user = await _unitOfWork.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (user == null)
+                return null;
+
+            if (string.IsNullOrEmpty(user.PasswordHash))
+                return null;
+
+            var isPasswordValid = BCrypt.Net.BCrypt.Verify(
+                request.Password,
+                user.PasswordHash);
+
+            if (!isPasswordValid)
+                return null;
+
+            var token = _jwtService.GenerateToken(
+              user.Id,
+              user.Email,
+              user.FullName);
+
+            return new LoginResponseDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                Token = token
+            };
+        }
+
+
 
         public async Task<bool> DeleteAsync(int id)
         {
@@ -103,14 +140,10 @@ namespace ICV.Application.Services
             {
                 Email = request.Email,
                 FullName = request.FullName,
-
-                // Şimdilik düz kaydediyoruz.
-                // Bir sonraki derste BCrypt ile hashleyeceğiz.
-                PasswordHash = request.Password,
-
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 PreferredLanguage = string.IsNullOrWhiteSpace(request.PreferredLanguage)
-                    ? "en"
-                    : request.PreferredLanguage
+            ? "en"
+            : request.PreferredLanguage
             };
 
             // Veritabanına ekle
