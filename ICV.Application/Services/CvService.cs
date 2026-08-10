@@ -14,6 +14,79 @@ namespace ICV.Application.Services
             _unitOfWork = unitOfWork;
         }
 
+
+        public async Task<bool> DeleteAsync(int cvId, int userId)
+        {
+            var cv = await _unitOfWork.Cvs
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
+
+            if (cv == null)
+                return false;
+
+            _unitOfWork.Cvs.Delete(cv);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<CvResponseDto?> UpdateAsync(
+    int cvId,
+    UpdateCvRequestDto request,
+    int userId)
+        {
+            var cv = await _unitOfWork.Cvs
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
+
+            if (cv == null)
+                return null;
+
+            cv.ProfessionId = request.ProfessionId;
+            cv.Title = request.Title;
+            cv.Summary = request.Summary;
+
+            _unitOfWork.Cvs.Update(cv);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return new CvResponseDto
+            {
+                Id = cv.Id,
+                UserId = cv.UserId,
+                ProfessionId = cv.ProfessionId,
+                Title = cv.Title,
+                Summary = cv.Summary,
+                Source = (int)cv.Source,
+                CreatedAt = cv.CreatedAt
+            };
+        }
+
+        public async Task<CvResponseDto?> GetByIdAsync(int cvId, int userId)
+        {
+            var cv = await _unitOfWork.Cvs
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
+
+            if (cv == null)
+                return null;
+
+            return new CvResponseDto
+            {
+                Id = cv.Id,
+                UserId = cv.UserId,
+                ProfessionId = cv.ProfessionId,
+                Title = cv.Title,
+                Summary = cv.Summary,
+                Source = (int)cv.Source,
+                CreatedAt = cv.CreatedAt
+            };
+        }
+
         public async Task<IEnumerable<CvResponseDto>> GetMyCvsAsync(int userId)
         {
             var cvs = await _unitOfWork.Cvs

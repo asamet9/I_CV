@@ -13,7 +13,10 @@ namespace ICV.Application.Interfaces.Services
     public interface ICvService
     {
 
-
+        Task<bool> DeleteAsync(int cvId, int userId);
+        Task<CvResponseDto?> UpdateAsync(int cvId,UpdateCvRequestDto request,int userId);
+           
+        Task<CvResponseDto?> GetByIdAsync(int cvId, int userId);
         Task<IEnumerable<CvResponseDto>> GetMyCvsAsync(int userId);
         Task<CvResponseDto> CreateAsync(CreateCvRequestDto request,int userId);
 
