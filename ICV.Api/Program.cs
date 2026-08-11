@@ -101,8 +101,8 @@ builder.Services.AddScoped<ICvSectionItemService, CvSectionItemService>();
 builder.Services.AddScoped<IProfessionService, ProfessionService>();
 builder.Services.AddScoped<IQuestionTemplateService,  QuestionTemplateService>();
 builder.Services.AddScoped<ISkillSuggestionService, SkillSuggestionService>();
-
-
+builder.Services.AddScoped<ICourseRecommendationService, CourseRecommendationService>();
+builder.Services.AddScoped<IUserSkillProgressService, UserSkillProgressService>();
 
 
 var app = builder.Build();
