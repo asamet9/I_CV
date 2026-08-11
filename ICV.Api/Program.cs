@@ -97,7 +97,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICvSectionService, CvSectionService>();
-
+builder.Services.AddScoped<ICvSectionItemService, CvSectionItemService>();
 
 var app = builder.Build();
 
