@@ -98,6 +98,12 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICvSectionService, CvSectionService>();
 builder.Services.AddScoped<ICvSectionItemService, CvSectionItemService>();
+builder.Services.AddScoped<IProfessionService, ProfessionService>();
+builder.Services.AddScoped<IQuestionTemplateService,  QuestionTemplateService>();
+builder.Services.AddScoped<ISkillSuggestionService, SkillSuggestionService>();
+
+
+
 
 var app = builder.Build();
 
