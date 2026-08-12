@@ -26,6 +26,8 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
         public IUserSkillProgressRepository UserSkillProgresses { get; }
 
+        public ICvAnalysisRepository CvAnalyses { get; } // CV analiz repository'si.
+
         public UnitOfWork(
             ApplicationDbContext context,
             IUserRepository userRepository,
@@ -36,7 +38,8 @@ namespace ICV.Infrastructure.Persistence.Repositories
             ISkillSuggestionRepository skillSuggestionRepository,
             ICourseRecommendationRepository courseRecommendationRepository,
             IQuestionTemplateRepository questionTemplateRepository,
-            IUserSkillProgressRepository userSkillProgressRepository)
+            IUserSkillProgressRepository userSkillProgressRepository,
+            ICvAnalysisRepository cvAnalysisRepository)
         {
             _context = context;
 
@@ -49,6 +52,7 @@ namespace ICV.Infrastructure.Persistence.Repositories
             CourseRecommendations = courseRecommendationRepository;
             QuestionTemplates = questionTemplateRepository;
             UserSkillProgresses = userSkillProgressRepository;
+            CvAnalyses = cvAnalysisRepository; // CV analiz repository'sini UnitOfWork'e bağlıyoruz.
         }
 
         public async Task<int> SaveChangesAsync()

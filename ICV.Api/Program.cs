@@ -51,6 +51,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+Console.WriteLine(builder.Configuration.GetConnectionString("DefaultConnection"));
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
@@ -89,6 +90,7 @@ builder.Services.AddScoped<ISkillSuggestionRepository, SkillSuggestionRepository
 builder.Services.AddScoped<ICourseRecommendationRepository, CourseRecommendationRepository>();
 builder.Services.AddScoped<IQuestionTemplateRepository, QuestionTemplateRepository>();
 builder.Services.AddScoped<IUserSkillProgressRepository, UserSkillProgressRepository>();
+builder.Services.AddScoped<ICvAnalysisRepository, CvAnalysisRepository>();
 
 // Unit Of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -104,6 +106,9 @@ builder.Services.AddScoped<ISkillSuggestionService, SkillSuggestionService>();
 builder.Services.AddScoped<ICourseRecommendationService, CourseRecommendationService>();
 builder.Services.AddScoped<IUserSkillProgressService, UserSkillProgressService>();
 
+builder.Services.AddScoped<ICvAnalysisService, CvAnalysisService>();
+    
+  
 
 var app = builder.Build();
 

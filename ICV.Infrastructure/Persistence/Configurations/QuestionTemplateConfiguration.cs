@@ -25,6 +25,9 @@ namespace ICV.Infrastructure.Persistence.Configurations
                 .WithMany(x => x.QuestionTemplates)
                 .HasForeignKey(x => x.ProfessionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(x => x.ExpectedValue)
+                .HasMaxLength(200);
         }
     }
 }

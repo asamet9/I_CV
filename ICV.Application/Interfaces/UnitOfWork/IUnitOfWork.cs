@@ -29,7 +29,11 @@ namespace ICV.Application.Interfaces.UnitOfWork
 
         IUserSkillProgressRepository UserSkillProgresses { get; }
 
+        ICvAnalysisRepository CvAnalyses { get; } // CV analiz sonuçlarına erişim sağlar.
+
         Task<int> SaveChangesAsync();
         void Dispose();
+
+
     }
 }

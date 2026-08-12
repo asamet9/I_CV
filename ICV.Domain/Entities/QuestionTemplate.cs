@@ -22,5 +22,17 @@ namespace ICV.Domain.Entities
                                                                // EF Core sayesinde QuestionTemplate -> Profession ilişkisini kurar.
                                                                // Veritabanında kolon oluşturmaz, kod tarafındaki ilişkiyi temsil eder.
 
+
+        // Kullanıcının CV'sinde aranacak gerçek değer.
+        //
+        // Question kullanıcıya gösterilecek soru:
+        // "C# biliyor musun?"
+        //
+        // ExpectedValue ise analiz sırasında aranacak değer:
+        // "C#"
+        //
+        // Böylece kullanıcıya gösterilen soru ile
+        // sistemin aradığı skill birbirinden ayrılmış olur.
+        public string? ExpectedValue { get; set; }
     }
 }
