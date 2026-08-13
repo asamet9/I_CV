@@ -12,13 +12,15 @@ namespace ICV.Application.Services
     /// </summary>
     public class CvAnalysisService : ICvAnalysisService
     {
-        // Veritabanındaki entity'lere erişmek için UnitOfWork kullanıyoruz.
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISkillSuggestionService _skillSuggestionService; // Eksik skill'leri öneriye dönüştürmek için kullanıyoruz.
 
-        // Gerekli bağımlılıkları Dependency Injection üzerinden alıyoruz.
-        public CvAnalysisService(IUnitOfWork unitOfWork)
+        public CvAnalysisService(
+            IUnitOfWork unitOfWork,
+            ISkillSuggestionService skillSuggestionService)
         {
             _unitOfWork = unitOfWork;
+            _skillSuggestionService = skillSuggestionService;
         }
 
         /// <summary>
@@ -30,24 +32,13 @@ namespace ICV.Application.Services
             int userId)
         {
 
-            // CV'nin hem ID'sini hem de sahibi olan kullanıcıyı kontrol ediyoruz.
-            Console.WriteLine($"CV ID: {cvId}");
-            Console.WriteLine($"USER ID: {userId}");
             // CV'yi buluyor ve aynı anda CV'nin giriş yapan kullanıcıya ait
             // olup olmadığını kontrol ediyoruz.
             // Önce sadece CV ID'sine göre CV'yi buluyoruz.
             var cv = await _unitOfWork.Cvs
-                .FirstOrDefaultAsync(x => x.Id == cvId);
-
-            // Bulduğumuz CV'nin UserId değerini konsola yazıyoruz.
-            if (cv != null)
-            {
-                Console.WriteLine($"DB'deki CV UserId: {cv.UserId}");
-            }
-            else
-            {
-                Console.WriteLine("CV bulunamadı!");
-            }
+        .FirstOrDefaultAsync(x =>
+            x.Id == cvId &&
+            x.UserId == userId);
 
             // CV yoksa veya başka kullanıcıya aitse erişime izin vermiyoruz.
             if (cv == null)
@@ -116,7 +107,7 @@ namespace ICV.Application.Services
             var matchedTemplates = new List<string>();
 
             // CV'de bulunamayan meslek kriterlerini burada tutacağız.
-            var missingTemplates = new List<string>();
+           var missingTemplates = new List<MissingSkillDto>();
 
 
             // Her meslek kriterini tek tek kontrol ediyoruz.
@@ -166,7 +157,11 @@ namespace ICV.Application.Services
                 // Bulunamadıysa missing listesine ekliyoruz.
                 else
                 {
-                    missingTemplates.Add(template.ExpectedValue);
+                    missingTemplates.Add(new MissingSkillDto
+                    {
+                        Skill = template.ExpectedValue,
+                        Category = template.Category
+                    });
                 }
             }
 
@@ -209,6 +204,16 @@ namespace ICV.Application.Services
                 Score = score                                     // Hesaplanan skor
             };
 
+            // ---------------------------------------------------------
+            // 9. EKSİK BECERİLER İÇİN ÖNERİ OLUŞTUR
+            // ---------------------------------------------------------
+
+            // CV analizinde bulunamayan her kriter için
+            // kullanıcıya bir SkillSuggestion oluşturuyoruz.
+            await _skillSuggestionService.GenerateFromAnalysisAsync(
+            cvId,
+            missingTemplates,
+            userId);
 
             // Analiz sonucunu veritabanına eklenmek üzere
             // CvAnalysis repository'sine gönderiyoruz.
@@ -219,12 +224,20 @@ namespace ICV.Application.Services
 
             return new CvAnalysisResponseDto
             {
-                Id = analysis.Id, // Oluşturulan analiz kaydının ID'si.
-                CvId = analysis.CvId, // Analiz edilen CV'nin ID'si.
-                ProfessionId = analysis.ProfessionId, // Analiz yapılan mesleğin ID'si.
-                MatchedSkillCount = analysis.MatchedSkillCount, // Eşleşen kriter sayısı.
-                MissingSkillCount = analysis.MissingSkillCount, // Eksik kriter sayısı.
-                Score = analysis.Score // Hesaplanan CV skoru.
+                Id = analysis.Id,
+                CvId = analysis.CvId,
+                ProfessionId = analysis.ProfessionId,
+
+                ProfessionName = profession.Name, // Analizin hangi meslek için yapıldığını response'a ekliyoruz.
+
+                MatchedSkillCount = analysis.MatchedSkillCount,
+                MissingSkillCount = analysis.MissingSkillCount,
+                Score = analysis.Score,
+
+                CreatedAt = analysis.CreatedAt, // Analizin oluşturulma tarihini response'a ekliyoruz.
+
+                MatchedSkills = matchedTemplates,
+                MissingSkills = missingTemplates,
             };
 
         }

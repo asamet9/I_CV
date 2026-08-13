@@ -36,7 +36,8 @@ namespace ICV.Application.Services
                 ProfessionId = request.ProfessionId,
                 Question = request.Question,
                 QuestionType = request.QuestionType,
-                IsRequired = request.IsRequired
+                IsRequired = request.IsRequired,
+                Category = request.Category
             };
 
             await _unitOfWork.QuestionTemplates
@@ -51,6 +52,7 @@ namespace ICV.Application.Services
                 Question = questionTemplate.Question,
                 QuestionType = questionTemplate.QuestionType,
                 IsRequired = questionTemplate.IsRequired,
+                Category = questionTemplate.Category,
                 CreatedAt = questionTemplate.CreatedAt
             };
         }
@@ -68,6 +70,7 @@ namespace ICV.Application.Services
                 Question = x.Question,
                 QuestionType = x.QuestionType,
                 IsRequired = x.IsRequired,
+                Category = x.Category,
                 CreatedAt = x.CreatedAt
             });
         }
@@ -88,6 +91,7 @@ namespace ICV.Application.Services
                 Question = questionTemplate.Question,
                 QuestionType = questionTemplate.QuestionType,
                 IsRequired = questionTemplate.IsRequired,
+                Category = questionTemplate.Category,
                 CreatedAt = questionTemplate.CreatedAt
             };
         }
@@ -105,6 +109,7 @@ namespace ICV.Application.Services
             questionTemplate.Question = request.Question;
             questionTemplate.QuestionType = request.QuestionType;
             questionTemplate.IsRequired = request.IsRequired;
+            questionTemplate.Category = request.Category;
 
             _unitOfWork.QuestionTemplates.Update(questionTemplate);
 
@@ -117,6 +122,7 @@ namespace ICV.Application.Services
                 Question = questionTemplate.Question,
                 QuestionType = questionTemplate.QuestionType,
                 IsRequired = questionTemplate.IsRequired,
+                Category = questionTemplate.Category,
                 CreatedAt = questionTemplate.CreatedAt
             };
         }

@@ -34,5 +34,9 @@ namespace ICV.Domain.Entities
         // Böylece kullanıcıya gösterilen soru ile
         // sistemin aradığı skill birbirinden ayrılmış olur.
         public string? ExpectedValue { get; set; }
+
+        // Skill'in hangi kategoriye ait olduğunu belirtir.
+        // Örn: Programming, DevOps, Database, Language, Soft Skill...
+        public string? Category { get; set; }
     }
 }

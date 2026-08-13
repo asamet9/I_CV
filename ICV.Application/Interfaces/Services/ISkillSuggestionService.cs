@@ -1,9 +1,10 @@
-﻿using System;
+﻿using ICV.Application.DTOs.CvAnalysis;
+using ICV.Application.DTOs.SkillSuggestion;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ICV.Application.DTOs.SkillSuggestion;
 
 namespace ICV.Application.Interfaces.Services
 {
@@ -28,6 +29,13 @@ namespace ICV.Application.Interfaces.Services
 
         Task<bool> DeleteAsync(
             int suggestionId,
+            int userId);
+
+        // CV analizi sonucunda eksik kalan yetenekler için
+        // otomatik SkillSuggestion kayıtları oluşturur.
+        Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAnalysisAsync(
+            int cvId,
+            IEnumerable<MissingSkillDto> missingSkills,
             int userId);
     }
 }

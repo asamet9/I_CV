@@ -28,6 +28,10 @@ namespace ICV.Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.ExpectedValue)
                 .HasMaxLength(200);
+
+            builder.Property(x => x.Category)
+    .HasMaxLength(50);
+
         }
     }
 }

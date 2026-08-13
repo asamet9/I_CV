@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using ICV.Application.DTOs.CvAnalysis;
 using ICV.Application.DTOs.SkillSuggestion;
 using ICV.Application.Interfaces.Services;
 using ICV.Application.Interfaces.UnitOfWork;
@@ -164,6 +166,88 @@ namespace ICV.Application.Services
             await _unitOfWork.SaveChangesAsync();
 
             return true;
+        }
+
+        // CV analizinde eksik bulunan yetenekleri otomatik olarak
+        // SkillSuggestion kayıtlarına dönüştürür.
+        public async Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAnalysisAsync(
+            int cvId,
+            IEnumerable<MissingSkillDto> missingSkills,
+            int userId)
+        {
+            // CV'nin giriş yapan kullanıcıya ait olup olmadığını kontrol ediyoruz.
+            var cv = await _unitOfWork.Cvs
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
+
+            if (cv == null)
+                throw new UnauthorizedAccessException(
+                    "Bu CV'ye erişim yetkiniz yok.");
+
+            // Oluşturacağımız önerileri burada tutacağız.
+            var suggestions = new List<SkillSuggestion>();
+
+            // Analiz sonucunda bulunan her eksik skill için
+            // ayrı bir SkillSuggestion oluşturuyoruz.
+            foreach (var skill in missingSkills)
+            {
+                // Skill boşsa kaydetmiyoruz.
+                if (string.IsNullOrWhiteSpace(skill.Skill))
+                    continue;
+
+                // Aynı skill daha önce bu CV için önerilmişse
+                // tekrar kayıt oluşturmuyoruz.
+                var suggestionExists = await _unitOfWork.SkillSuggestions
+                    .AnyAsync(x =>
+                        x.CvId == cvId &&
+                        x.SuggestedSkill == skill.Skill);
+
+                if (suggestionExists)
+                    continue;
+
+                // Eksik skill için yeni öneri oluşturuyoruz.
+                var suggestion = new SkillSuggestion
+                {
+                    CvId = cvId,
+
+                    // MissingSkillDto içerisindeki gerçek skill.
+                    SuggestedSkill = skill.Skill,
+
+                    Reason =
+                        "Bu yetenek seçilen meslek için gerekli ancak CV'de bulunamadı.",
+
+                    // Artık sabit "Technical" kullanmıyoruz.
+                    // QuestionTemplate'dan gelen kategori kullanılıyor.
+                    Category = skill.Category,
+
+                    Status = SuggestionStatus.Pending
+                };
+
+                suggestions.Add(suggestion);
+            }
+
+            // Yeni oluşturulan önerilerin tamamını veritabanına ekliyoruz.
+            foreach (var suggestion in suggestions)
+            {
+                await _unitOfWork.SkillSuggestions
+                    .AddAsync(suggestion);
+            }
+
+            // Tüm yeni kayıtları kaydediyoruz.
+            await _unitOfWork.SaveChangesAsync();
+
+            // Entity'leri DTO'lara çeviriyoruz.
+            return suggestions.Select(x => new SkillSuggestionResponseDto
+            {
+                Id = x.Id,
+                CvId = x.CvId,
+                SuggestedSkill = x.SuggestedSkill,
+                Reason = x.Reason,
+                Category = x.Category,
+                Status = (int)x.Status,
+                CreatedAt = x.CreatedAt
+            });
         }
     }
 }
