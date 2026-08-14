@@ -19,7 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICvService, CvService>();
-
+builder.Services.AddScoped<ISkillDevelopmentGoalService, SkillDevelopmentGoalService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -91,6 +91,7 @@ builder.Services.AddScoped<ICourseRecommendationRepository, CourseRecommendation
 builder.Services.AddScoped<IQuestionTemplateRepository, QuestionTemplateRepository>();
 builder.Services.AddScoped<IUserSkillProgressRepository, UserSkillProgressRepository>();
 builder.Services.AddScoped<ICvAnalysisRepository, CvAnalysisRepository>();
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
 // Unit Of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

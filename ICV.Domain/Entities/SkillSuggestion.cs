@@ -40,5 +40,9 @@ namespace ICV.Domain.Entities
         public ICollection<UserSkillProgress> UserSkillProgresses { get; set; }
     = new List<UserSkillProgress>();
 
+        // Bu öneri üzerinden oluşturulan skill geliştirme hedefi.
+        public ICollection<SkillDevelopmentGoal> SkillDevelopmentGoals { get; set; }
+            = new List<SkillDevelopmentGoal>();
+
     }
 }

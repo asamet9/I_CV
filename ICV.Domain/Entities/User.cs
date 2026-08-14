@@ -18,6 +18,10 @@ namespace ICV.Domain.Entities
         // Bu kullanıcıya ait tüm CV'ler.
         public ICollection<Cv> Cvs { get; set; } = new List<Cv>();
 
+        // Kullanıcının oluşturduğu skill geliştirme hedefleri.
+        public ICollection<SkillDevelopmentGoal> SkillDevelopmentGoals { get; set; }
+            = new List<SkillDevelopmentGoal>();
+
         public ICollection<UserSkillProgress> SkillProgresses { get; set; }
     = new List<UserSkillProgress>();
 

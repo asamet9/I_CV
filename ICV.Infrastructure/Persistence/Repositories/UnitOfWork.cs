@@ -1,5 +1,6 @@
 ﻿using ICV.Application.Interfaces.Repositories;
 using ICV.Application.Interfaces.UnitOfWork;
+using ICV.Domain.Entities;
 using ICV.Infrastructure.Persistence.Context;
 
 namespace ICV.Infrastructure.Persistence.Repositories
@@ -26,7 +27,9 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
         public IUserSkillProgressRepository UserSkillProgresses { get; }
 
-        public ICvAnalysisRepository CvAnalyses { get; } // CV analiz repository'si.
+        public ICvAnalysisRepository CvAnalyses { get; }
+
+        public IGenericRepository<SkillDevelopmentGoal> SkillDevelopmentGoals { get; }
 
         public UnitOfWork(
             ApplicationDbContext context,
@@ -39,7 +42,8 @@ namespace ICV.Infrastructure.Persistence.Repositories
             ICourseRecommendationRepository courseRecommendationRepository,
             IQuestionTemplateRepository questionTemplateRepository,
             IUserSkillProgressRepository userSkillProgressRepository,
-            ICvAnalysisRepository cvAnalysisRepository)
+            ICvAnalysisRepository cvAnalysisRepository,
+            IGenericRepository<SkillDevelopmentGoal> skillDevelopmentGoalRepository)
         {
             _context = context;
 
@@ -52,7 +56,9 @@ namespace ICV.Infrastructure.Persistence.Repositories
             CourseRecommendations = courseRecommendationRepository;
             QuestionTemplates = questionTemplateRepository;
             UserSkillProgresses = userSkillProgressRepository;
-            CvAnalyses = cvAnalysisRepository; // CV analiz repository'sini UnitOfWork'e bağlıyoruz.
+            CvAnalyses = cvAnalysisRepository;
+
+            SkillDevelopmentGoals = skillDevelopmentGoalRepository;
         }
 
         public async Task<int> SaveChangesAsync()

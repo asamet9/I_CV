@@ -1,10 +1,10 @@
-﻿using System;
+﻿using ICV.Application.Interfaces.Repositories;
+using ICV.Domain.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using ICV.Application.Interfaces.Repositories;
 
 
 namespace ICV.Application.Interfaces.UnitOfWork
@@ -30,6 +30,8 @@ namespace ICV.Application.Interfaces.UnitOfWork
         IUserSkillProgressRepository UserSkillProgresses { get; }
 
         ICvAnalysisRepository CvAnalyses { get; } // CV analiz sonuçlarına erişim sağlar.
+
+        IGenericRepository<SkillDevelopmentGoal> SkillDevelopmentGoals { get; }
 
         Task<int> SaveChangesAsync();
         void Dispose();
