@@ -31,6 +31,8 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
         public IGenericRepository<SkillDevelopmentGoal> SkillDevelopmentGoals { get; }
 
+        public ICourseRepository Courses { get; }
+
         public UnitOfWork(
             ApplicationDbContext context,
             IUserRepository userRepository,
@@ -43,6 +45,7 @@ namespace ICV.Infrastructure.Persistence.Repositories
             IQuestionTemplateRepository questionTemplateRepository,
             IUserSkillProgressRepository userSkillProgressRepository,
             ICvAnalysisRepository cvAnalysisRepository,
+            ICourseRepository courseRepository,
             IGenericRepository<SkillDevelopmentGoal> skillDevelopmentGoalRepository)
         {
             _context = context;
@@ -57,6 +60,12 @@ namespace ICV.Infrastructure.Persistence.Repositories
             QuestionTemplates = questionTemplateRepository;
             UserSkillProgresses = userSkillProgressRepository;
             CvAnalyses = cvAnalysisRepository;
+
+            CourseRecommendations = courseRecommendationRepository;
+
+            Courses = courseRepository;
+
+            QuestionTemplates = questionTemplateRepository;
 
             SkillDevelopmentGoals = skillDevelopmentGoalRepository;
         }

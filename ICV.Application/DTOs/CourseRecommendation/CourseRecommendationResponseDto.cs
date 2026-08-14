@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using ICV.Domain.Enums;
+﻿using ICV.Domain.Enums;
 
 namespace ICV.Application.DTOs.CourseRecommendation
 {
@@ -14,6 +8,9 @@ namespace ICV.Application.DTOs.CourseRecommendation
 
         public int SkillSuggestionId { get; set; }
 
+        public int CourseId { get; set; }
+
+        // Course bilgilerinden gelir.
         public string Title { get; set; } = string.Empty;
 
         public string Provider { get; set; } = string.Empty;

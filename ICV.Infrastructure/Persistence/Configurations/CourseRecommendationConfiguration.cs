@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ICV.Infrastructure.Persistence.Configurations
 {
-    public class CourseRecommendationConfiguration : IEntityTypeConfiguration<CourseRecommendation>
+    public class CourseRecommendationConfiguration
+        : IEntityTypeConfiguration<CourseRecommendation>
     {
         public void Configure(EntityTypeBuilder<CourseRecommendation> builder)
         {
@@ -24,10 +25,18 @@ namespace ICV.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(1000);
 
+
             // Her kurs önerisi bir SkillSuggestion'a aittir.
             builder.HasOne(x => x.SkillSuggestion)
                 .WithMany(x => x.CourseRecommendations)
                 .HasForeignKey(x => x.SkillSuggestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // Her kurs önerisi bir Course'a bağlıdır.
+            builder.HasOne(x => x.Course)
+                .WithMany(x => x.CourseRecommendations)
+                .HasForeignKey(x => x.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

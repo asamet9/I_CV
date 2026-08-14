@@ -92,6 +92,7 @@ builder.Services.AddScoped<IQuestionTemplateRepository, QuestionTemplateReposito
 builder.Services.AddScoped<IUserSkillProgressRepository, UserSkillProgressRepository>();
 builder.Services.AddScoped<ICvAnalysisRepository, CvAnalysisRepository>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 
 // Unit Of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
