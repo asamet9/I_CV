@@ -1,14 +1,16 @@
+using ICV.Application.Interfaces.AI;
 using ICV.Application.Interfaces.Repositories;
 using ICV.Application.Interfaces.Services;
 using ICV.Application.Interfaces.UnitOfWork;
 using ICV.Application.Services;
-
+using ICV.Infrastructure.Configuration;
 using ICV.Infrastructure.Persistence.Context;
 using ICV.Infrastructure.Persistence.Repositories;
 using ICV.Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
-
+using ICV.Infrastructure.Services.AiProviders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -20,6 +22,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICvService, CvService>();
 builder.Services.AddScoped<ISkillDevelopmentGoalService, SkillDevelopmentGoalService>();
+
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -109,8 +112,10 @@ builder.Services.AddScoped<ICourseRecommendationService, CourseRecommendationSer
 builder.Services.AddScoped<IUserSkillProgressService, UserSkillProgressService>();
 
 builder.Services.AddScoped<ICvAnalysisService, CvAnalysisService>();
-    
-  
+
+builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddScoped<IAiProvider, GeminiAiProvider>();
+
 
 var app = builder.Build();
 
