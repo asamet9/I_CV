@@ -31,11 +31,15 @@ namespace ICV.Application.Interfaces.Services
             int suggestionId,
             int userId);
 
-        // CV analizi sonucunda eksik kalan yetenekler için
-        // otomatik SkillSuggestion kayıtları oluşturur.
         Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAnalysisAsync(
             int cvId,
             IEnumerable<MissingSkillDto> missingSkills,
+            int userId);
+
+        Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAiAsync(
+            int cvId,
+            string cvContent,
+            string professionName,
             int userId);
     }
 }
