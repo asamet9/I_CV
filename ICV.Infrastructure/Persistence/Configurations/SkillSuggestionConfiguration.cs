@@ -4,38 +4,101 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ICV.Infrastructure.Persistence.Configurations
 {
-    public class SkillSuggestionConfiguration : IEntityTypeConfiguration<SkillSuggestion>
+    public class SkillSuggestionConfiguration
+        : IEntityTypeConfiguration<SkillSuggestion>
     {
         public void Configure(EntityTypeBuilder<SkillSuggestion> builder)
         {
             builder.ToTable(nameof(SkillSuggestion));
 
+            // ---------------------------------------------------------
+            // PRIMARY KEY
+            // ---------------------------------------------------------
+
             builder.HasKey(x => x.Id);
 
-            // Önerilen yetenek
+
+            // ---------------------------------------------------------
+            // SKILL
+            // ---------------------------------------------------------
+
             builder.Property(x => x.SuggestedSkill)
                 .IsRequired()
                 .HasMaxLength(100);
 
-            // AI açıklaması
+
+            // ---------------------------------------------------------
+            // REASON
+            // ---------------------------------------------------------
+
             builder.Property(x => x.Reason)
+                .IsRequired()
                 .HasMaxLength(1000);
 
-            // Kategori
+
+            // ---------------------------------------------------------
+            // CATEGORY
+            // ---------------------------------------------------------
+
             builder.Property(x => x.Category)
                 .HasMaxLength(50);
 
-            // Her öneri bir CV'ye aittir.
-            builder.HasOne(x => x.Cv)
-         .WithMany(x => x.SkillSuggestions)
-         .HasForeignKey(x => x.CvId)
-         .OnDelete(DeleteBehavior.Cascade);
 
-            // Her önerinin birçok kurs önerisi olabilir.
+            // ---------------------------------------------------------
+            // RECOMMENDED TARGET LEVEL
+            // ---------------------------------------------------------
+
+            // AI'nın kullanıcı için önerdiği hedef seviyeyi tutar.
+            builder.Property(x => x.RecommendedTargetLevel)
+                .IsRequired();
+
+
+            // ---------------------------------------------------------
+            // STATUS
+            // ---------------------------------------------------------
+
+            builder.Property(x => x.Status)
+                .IsRequired();
+
+
+            // ---------------------------------------------------------
+            // CV İLİŞKİSİ
+            // ---------------------------------------------------------
+
+            builder.HasOne(x => x.Cv)
+                .WithMany(x => x.SkillSuggestions)
+                .HasForeignKey(x => x.CvId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // ---------------------------------------------------------
+            // COURSE RECOMMENDATION İLİŞKİSİ
+            // ---------------------------------------------------------
+
             builder.HasMany(x => x.CourseRecommendations)
                 .WithOne(x => x.SkillSuggestion)
                 .HasForeignKey(x => x.SkillSuggestionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+
+            // ---------------------------------------------------------
+            // USER SKILL PROGRESS İLİŞKİSİ
+            // ---------------------------------------------------------
+
+            builder.HasMany(x => x.UserSkillProgresses)
+                .WithOne(x => x.SkillSuggestion)
+                .HasForeignKey(x => x.SkillSuggestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // ---------------------------------------------------------
+            // SKILL DEVELOPMENT GOAL İLİŞKİSİ
+            // ---------------------------------------------------------
+
+            builder.HasMany(x => x.SkillDevelopmentGoals)
+                .WithOne(x => x.SkillSuggestion)
+                .HasForeignKey(x => x.SkillSuggestionId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

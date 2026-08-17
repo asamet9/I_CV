@@ -8,30 +8,33 @@ namespace ICV.Application.DTOs.SkillDevelopmentGoal
     /// </summary>
     public class CreateSkillDevelopmentGoalRequestDto
     {
-        // Eğer hedef bir AI önerisinden geldiyse
-        // ilgili önerinin ID'si gönderilir.
-        //
-        // Kullanıcı kendi istediği bir skill'i de ekleyebileceği
-        // için bu alan zorunlu değildir.
+        // Eğer hedef bir AI skill önerisinden geldiyse
+        // ilgili önerinin ID'sini tutar.
         public int? SkillSuggestionId { get; set; }
 
-        // Geliştirilmek istenen skill.
-        // Örn: Docker
+        // Geliştirilmek istenen skill'in adını tutar.
+        // Örneğin: CSS, Docker, React...
         public string SkillName { get; set; } = string.Empty;
 
-        // Kullanıcının mevcut seviyesi.
+        // Kullanıcının mevcut seviyesini belirtir.
         public SkillLevel CurrentLevel { get; set; }
 
-        // Kullanıcının ulaşmak istediği seviye.
+        // Kullanıcının ulaşmak istediği hedef seviyeyi belirtir.
+        // AI'nın önerdiği seviyeden farklı olabilir.
         public SkillLevel TargetLevel { get; set; }
 
-        // Hedeflenen bitiş tarihi.
-        public DateTime? TargetDate { get; set; }
+        // Kullanıcının ne kadar uzun bir gelişim süreci
+        // istediğini belirtir.
+        public DevelopmentDuration PreferredDuration { get; set; }
 
-        // Haftada kaç saat çalışabileceği.
-        public int WeeklyHours { get; set; }
+        // Kullanıcının ücretli eğitimlere açık olup olmadığını belirtir.
+        public bool WantsPaidCourse { get; set; }
 
-        // Kullanıcının bu skill'i neden öğrenmek istediği.
+        // Kullanıcının gelişim sonunda sertifika isteyip istemediğini belirtir.
+        public bool WantsCertificate { get; set; }
+
+        // Kullanıcının bu skill'i neden geliştirmek istediğini belirtir.
+        // Örneğin: İş bulmak, kariyer geliştirmek...
         public string? Purpose { get; set; }
     }
 }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ICV.Domain.Entities;
+﻿using ICV.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,46 +12,96 @@ namespace ICV.Infrastructure.Persistence.Configurations
         {
             builder.ToTable(nameof(SkillDevelopmentGoal));
 
-            // Primary Key
+            // ---------------------------------------------------------
+            // PRIMARY KEY
+            // ---------------------------------------------------------
+
             builder.HasKey(x => x.Id);
 
-            // Kullanıcının geliştirmek istediği yetenek.
-            // Örneğin: Docker, React, Azure...
+
+            // ---------------------------------------------------------
+            // SKILL
+            // ---------------------------------------------------------
+
+            // Geliştirilmek istenen skill.
+            // Örn: CSS, Docker, React, Azure...
             builder.Property(x => x.SkillName)
                 .IsRequired()
                 .HasMaxLength(100);
 
-            // Kullanıcının haftalık ayıracağı süre.
-            builder.Property(x => x.WeeklyHours)
+
+            // ---------------------------------------------------------
+            // ENUM ALANLARI
+            // ---------------------------------------------------------
+
+            // Kullanıcının mevcut seviyesi.
+            builder.Property(x => x.CurrentLevel)
                 .IsRequired();
 
-            // Öğrenme amacı.
+            // AI tarafından önerilen hedef seviye.
+            builder.Property(x => x.RecommendedTargetLevel)
+                .IsRequired();
+
+            // Kullanıcının seçtiği hedef seviye.
+            builder.Property(x => x.TargetLevel)
+                .IsRequired();
+
+            // Kullanıcının seçtiği gelişim süresi.
+            builder.Property(x => x.PreferredDuration)
+                .IsRequired();
+
+            // Hedefin durumu.
+            builder.Property(x => x.Status)
+                .IsRequired();
+
+
+            // ---------------------------------------------------------
+            // COURSE PREFERENCES
+            // ---------------------------------------------------------
+
+            // Kullanıcı ücretli eğitimlere açık mı?
+            builder.Property(x => x.WantsPaidCourse)
+                .IsRequired();
+
+            // Kullanıcı sertifika istiyor mu?
+            builder.Property(x => x.WantsCertificate)
+                .IsRequired();
+
+
+            // ---------------------------------------------------------
+            // PURPOSE
+            // ---------------------------------------------------------
+
+            // Kullanıcının bu skill'i neden geliştirmek istediği.
             builder.Property(x => x.Purpose)
                 .HasMaxLength(500);
+
 
             // ---------------------------------------------------------
             // USER İLİŞKİSİ
             // ---------------------------------------------------------
 
-            // Bir kullanıcı birden fazla skill geliştirme hedefi
-            // oluşturabilir.
+            // Bir kullanıcı birden fazla skill geliştirme
+            // hedefi oluşturabilir.
             //
-            // Örnek:
-            // Ali -> Docker
-            // Ali -> Azure
-            // Ali -> React
+            // User
+            //   ├── Docker
+            //   ├── CSS
+            //   └── Azure
             builder.HasOne(x => x.User)
                 .WithMany(x => x.SkillDevelopmentGoals)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+
             // ---------------------------------------------------------
             // SKILL SUGGESTION İLİŞKİSİ
             // ---------------------------------------------------------
 
-            // Bir hedef bir AI önerisinden oluşturulabilir.
-            // Ancak kullanıcı kendi istediği skill'i de ekleyebileceği
-            // için SkillSuggestionId nullable'dır.
+            // Hedef bir AI önerisinden oluşturulabilir.
+            //
+            // SkillSuggestionId nullable olduğu için kullanıcı
+            // kendi istediği skill'i de hedef olarak ekleyebilir.
             builder.HasOne(x => x.SkillSuggestion)
                 .WithMany(x => x.SkillDevelopmentGoals)
                 .HasForeignKey(x => x.SkillSuggestionId)

@@ -29,7 +29,9 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
         public ICvAnalysisRepository CvAnalyses { get; }
 
-        public IGenericRepository<SkillDevelopmentGoal> SkillDevelopmentGoals { get; }
+        public IGenericRepository<SkillDevelopmentGoal>
+            SkillDevelopmentGoals
+        { get; }
 
         public ICourseRepository Courses { get; }
 
@@ -46,28 +48,46 @@ namespace ICV.Infrastructure.Persistence.Repositories
             IUserSkillProgressRepository userSkillProgressRepository,
             ICvAnalysisRepository cvAnalysisRepository,
             ICourseRepository courseRepository,
-            IGenericRepository<SkillDevelopmentGoal> skillDevelopmentGoalRepository)
+            IGenericRepository<SkillDevelopmentGoal>
+                skillDevelopmentGoalRepository)
         {
             _context = context;
 
-            Users = userRepository;
-            Cvs = cvRepository;
-            Professions = professionRepository;
-            CvSections = cvSectionRepository;
-            CvSectionItems = cvSectionItemRepository;
-            SkillSuggestions = skillSuggestionRepository;
-            CourseRecommendations = courseRecommendationRepository;
-            QuestionTemplates = questionTemplateRepository;
-            UserSkillProgresses = userSkillProgressRepository;
-            CvAnalyses = cvAnalysisRepository;
+            Users =
+                userRepository;
 
-            CourseRecommendations = courseRecommendationRepository;
+            Cvs =
+                cvRepository;
 
-            Courses = courseRepository;
+            Professions =
+                professionRepository;
 
-            QuestionTemplates = questionTemplateRepository;
+            CvSections =
+                cvSectionRepository;
 
-            SkillDevelopmentGoals = skillDevelopmentGoalRepository;
+            CvSectionItems =
+                cvSectionItemRepository;
+
+            SkillSuggestions =
+                skillSuggestionRepository;
+
+            CourseRecommendations =
+                courseRecommendationRepository;
+
+            QuestionTemplates =
+                questionTemplateRepository;
+
+            UserSkillProgresses =
+                userSkillProgressRepository;
+
+            CvAnalyses =
+                cvAnalysisRepository;
+
+            Courses =
+                courseRepository;
+
+            SkillDevelopmentGoals =
+                skillDevelopmentGoalRepository;
         }
 
         public async Task<int> SaveChangesAsync()

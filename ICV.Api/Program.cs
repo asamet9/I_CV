@@ -19,7 +19,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
 builder.Services.AddControllers();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICvService, CvService>();
 builder.Services.AddScoped<ISkillDevelopmentGoalService, SkillDevelopmentGoalService>();
 

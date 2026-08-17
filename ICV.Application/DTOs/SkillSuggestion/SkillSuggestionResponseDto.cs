@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using ICV.Domain.Enums;
 
 namespace ICV.Application.DTOs.SkillSuggestion
 {
@@ -18,6 +19,8 @@ namespace ICV.Application.DTOs.SkillSuggestion
         public string Reason { get; set; } = string.Empty;
 
         public string? Category { get; set; }
+
+        public SkillLevel RecommendedTargetLevel { get; set; }
 
         public int Status { get; set; }
 

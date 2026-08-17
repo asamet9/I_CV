@@ -1,179 +1,214 @@
-﻿using Google.GenAI; // Gemini API client'ını kullanmamızı sağlar.
-using Google.GenAI.Types; // Gemini'nin Schema ve GenerateContentConfig tiplerini kullanmamızı sağlar.
-using ICV.Application.DTOs.AI; // AiSkillSuggestionDto sınıfına erişmemizi sağlar.
-using ICV.Application.Interfaces.AI; // IAiProvider interface'ini kullanmamızı sağlar.
-using ICV.Infrastructure.Configuration; // GeminiOptions sınıfına erişmemizi sağlar.
-using Microsoft.Extensions.Options; // IOptions<T> ile configuration değerlerini alır.
-using System.Text.Json; // JSON cevabını C# nesnelerine dönüştürür.
-using SchemaType = Google.GenAI.Types.Type; // System.Type ile Google.GenAI.Types.Type arasındaki isim çakışmasını çözer.
+﻿using Google.GenAI;
+using Google.GenAI.Types;
+using ICV.Application.DTOs.AI;
+using ICV.Application.Interfaces.AI;
+using ICV.Infrastructure.Configuration;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
+
+using SchemaType = Google.GenAI.Types.Type;
 
 namespace ICV.Infrastructure.Services.AiProviders
 {
     /// <summary>
     /// Google Gemini API ile iletişim kuran AI provider sınıfıdır.
-    /// IAiProvider interface'ini uyguladığı için Application katmanı
-    /// Gemini'ye doğrudan bağımlı değildir.
     /// </summary>
     public class GeminiAiProvider : IAiProvider
     {
-        private readonly GeminiOptions _options; // Gemini API ayarlarını tutar.
-        private readonly Client _client; // Gemini API'ye istek gönderecek SDK client'ıdır.
+        private readonly GeminiOptions _options;
+        private readonly Client _client;
 
-        /// <summary>
-        /// GeminiAiProvider sınıfının constructor'ıdır.
-        /// Dependency Injection tarafından otomatik olarak oluşturulur.
-        /// </summary>
         public GeminiAiProvider(IOptions<GeminiOptions> options)
         {
-            _options = options.Value; // User Secrets/appsettings içerisindeki Gemini ayarlarını alır.
+            _options = options.Value;
 
-            if (string.IsNullOrWhiteSpace(_options.ApiKey)) // API key boş veya sadece boşluklardan oluşuyor mu kontrol eder.
+            if (string.IsNullOrWhiteSpace(_options.ApiKey))
             {
                 throw new ArgumentException(
-                    "Gemini API key cannot be empty.", // API key yoksa anlamlı bir hata mesajı verir.
-                    nameof(options)); // Hatanın options parametresinden kaynaklandığını belirtir.
+                    "Gemini API key cannot be empty.",
+                    nameof(options));
             }
 
             _client = new Client(
-                apiKey: _options.ApiKey); // Gemini SDK client'ını API key ile oluşturur.
+                apiKey: _options.ApiKey);
         }
 
-        /// <summary>
-        /// CV içeriğini ve mesleği Gemini'ye göndererek
-        /// geliştirilmesi önerilen skill'leri döndürür.
-        /// </summary>
         public async Task<IEnumerable<AiSkillSuggestionDto>> GenerateSkillSuggestionsAsync(
-            string cvContent, // Kullanıcının CV'sinden elde edilen metinsel içerik.
-            string professionName, // Kullanıcının seçtiği meslek.
-            CancellationToken cancellationToken = default) // İşlemi gerektiğinde iptal etmek için kullanılır.
+            string cvContent,
+            string professionName,
+            CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(cvContent)) // CV içeriğinin boş olup olmadığını kontrol eder.
+            if (string.IsNullOrWhiteSpace(cvContent))
             {
                 throw new ArgumentException(
-                    "CV content cannot be empty.", // CV boşsa hata mesajı verir.
-                    nameof(cvContent)); // Hatanın cvContent parametresinden kaynaklandığını belirtir.
+                    "CV content cannot be empty.",
+                    nameof(cvContent));
             }
 
-            if (string.IsNullOrWhiteSpace(professionName)) // Meslek bilgisinin boş olup olmadığını kontrol eder.
+            if (string.IsNullOrWhiteSpace(professionName))
             {
                 throw new ArgumentException(
-                    "Profession name cannot be empty.", // Meslek boşsa hata mesajı verir.
-                    nameof(professionName)); // Hatanın professionName parametresinden kaynaklandığını belirtir.
+                    "Profession name cannot be empty.",
+                    nameof(professionName));
             }
 
-            var skillSuggestionSchema = new Schema // Gemini'nin döndüreceği JSON yapısını tanımlar.
+            var skillSuggestionSchema = new Schema
             {
-                Type = SchemaType.Array, // Ana JSON yapımızın bir array/list olacağını belirtir.
+                Type = SchemaType.Array,
 
-                Items = new Schema // Array içerisindeki her elemanın yapısını tanımlar.
+                Items = new Schema
                 {
-                    Type = SchemaType.Object, // Array içerisindeki her elemanın JSON object olacağını belirtir.
+                    Type = SchemaType.Object,
 
-                    Properties = new Dictionary<string, Schema> // JSON object içerisindeki alanları tanımlar.
-        {
-            {
-                "skill",
-                new Schema
-                {
-                    Type = SchemaType.String, // Skill değerinin string olacağını belirtir.
-                    Title = "Skill" // Alanın açıklayıcı adını belirtir.
-                }
-            },
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        {
+                            "skill",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Skill"
+                            }
+                        },
 
-            {
-                "category",
-                new Schema
-                {
-                    Type = SchemaType.String, // Category değerinin string olacağını belirtir.
-                    Title = "Category" // Alanın açıklayıcı adını belirtir.
-                }
-            },
+                        {
+                            "category",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Category"
+                            }
+                        },
 
-            {
-                "reason",
-                new Schema
-                {
-                    Type = SchemaType.String, // Reason değerinin string olacağını belirtir.
-                    Title = "Reason" // Alanın açıklayıcı adını belirtir.
-                }
-            }
-        },
+                        {
+                            "reason",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Reason"
+                            }
+                        },
 
-                    Required = new List<string> // Her skill objesinde bulunması zorunlu alanları belirtir.
-        {
-            "skill",
-            "category",
-            "reason"
-        },
+                        {
+                            "recommendedTargetLevel",
+                            new Schema
+                            {
+                                Type = SchemaType.Integer,
+                                Title = "Recommended Target Level"
+                            }
+                        }
+                    },
 
-                    PropertyOrdering = new List<string> // JSON alanlarının sırasını belirtir.
-        {
-            "skill",
-            "category",
-            "reason"
-        }
+                    Required = new List<string>
+                    {
+                        "skill",
+                        "category",
+                        "reason",
+                        "recommendedTargetLevel"
+                    },
+
+                    PropertyOrdering = new List<string>
+                    {
+                        "skill",
+                        "category",
+                        "reason",
+                        "recommendedTargetLevel"
+                    }
                 }
             };
 
             var prompt = $"""
-    You are an expert career advisor and CV analyzer.
+                You are an expert career advisor and CV analyzer.
 
-    Analyze the following CV for the profession: {professionName}
+                Analyze the following CV for the profession: {professionName}
 
-    Identify the most valuable technical or professional skills
-    that the candidate should develop.
+                Identify the most valuable technical or professional skills
+                that the candidate should develop.
 
-    Rules:
-    - Suggest only relevant skills.
-    - Do not suggest skills the candidate already clearly demonstrates.
-    - Focus on skills that improve employability.
-    - Avoid duplicate skills.
-    - Keep the number of suggestions between 3 and 8.
-    - Category should be a short category name such as Backend, Frontend,
-      DevOps, Database, Programming, Cloud, Testing or Security.
-    - Reason should briefly explain why the skill is valuable for this candidate.
+                Rules:
 
-    CV:
-    {cvContent}
-    """; // Gemini'ye CV analizinin kurallarını ve analiz edilecek CV'yi gönderir.
+                - Suggest only relevant skills.
+                - Do not suggest skills the candidate already clearly demonstrates.
+                - Focus on skills that improve employability.
+                - Avoid duplicate skills.
+                - Keep the number of suggestions between 3 and 8.
+
+                Category should be a short category name such as:
+                Backend, Frontend, DevOps, Database, Programming,
+                Cloud, Testing or Security.
+
+                Reason should briefly explain why the skill is valuable
+                for this candidate.
+
+                For every suggested skill, determine the recommended target
+                level for this specific candidate.
+
+                Skill levels are strictly represented by integers:
+
+                1 = Beginner
+                2 = Intermediate
+                3 = Advanced
+
+                For recommendedTargetLevel:
+                - You MUST return exactly one integer: 1, 2, or 3.
+                - Never return the text "Beginner", "Intermediate", or "Advanced".
+                - Never return any other number.
+
+                The recommended target level should represent the level
+                the candidate should reasonably aim for based on:
+                - their current CV
+                - their existing technical experience
+                - the profession
+                - the importance of the skill
+                - realistic career development
+
+                Do not automatically recommend Advanced.
+                Recommend Advanced only when it is realistically appropriate
+                for the candidate and profession.
+
+                Return ONLY the requested JSON structure.
+
+                CV:
+                {cvContent}
+                """;
 
             var response = await _client.Models.GenerateContentAsync(
-      model: _options.Model, // User Secrets içerisindeki Gemini modelini kullanır.
-      contents: prompt, // Hazırladığımız CV analiz prompt'unu Gemini'ye gönderir.
+                model: _options.Model,
+                contents: prompt,
 
-      config: new GenerateContentConfig
-      {
-          ResponseMimeType = "application/json", // Gemini'den cevabın JSON formatında gelmesini ister.
+                config: new GenerateContentConfig
+                {
+                    ResponseMimeType = "application/json",
+                    ResponseSchema = skillSuggestionSchema,
+                    Temperature = 0.2
+                },
 
-          ResponseSchema = skillSuggestionSchema, // Gemini'ye döndüreceği JSON'un yapısını bildirir.
+                cancellationToken: cancellationToken);
 
-          Temperature = 0.2 // Daha düşük değer kullanarak cevapların daha tutarlı olmasını sağlar.
-      },
+            var responseText = response.Text;
 
-      cancellationToken: cancellationToken); // İstek iptal edilirse Gemini çağrısının da iptal edilmesini sağlar.
-
-            var responseText = response.Text; // Gemini'nin oluşturduğu metinsel cevabı alır.
-
-            if (string.IsNullOrWhiteSpace(responseText)) // Gemini boş cevap döndürmüş mü kontrol eder.
+            if (string.IsNullOrWhiteSpace(responseText))
             {
-                return Enumerable.Empty<AiSkillSuggestionDto>(); // Boş cevap varsa boş liste döndürür.
+                return Enumerable.Empty<AiSkillSuggestionDto>();
             }
+
             try
             {
-                var suggestions = JsonSerializer.Deserialize<List<AiSkillSuggestionDto>>(
-                    responseText,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    }); // Gemini'den gelen JSON'u AiSkillSuggestionDto listesine dönüştürür.
+                var suggestions =
+                    JsonSerializer.Deserialize<List<AiSkillSuggestionDto>>(
+                        responseText,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
 
-                return suggestions ?? Enumerable.Empty<AiSkillSuggestionDto>(); // Deserialize null dönerse boş liste döndürür.
+                return suggestions ?? Enumerable.Empty<AiSkillSuggestionDto>();
             }
             catch (JsonException ex)
             {
                 throw new InvalidOperationException(
                     "Gemini returned an invalid JSON response.",
-                    ex); // Gemini beklediğimiz JSON formatında cevap vermezse anlamlı bir hata oluşturur.
+                    ex);
             }
         }
     }

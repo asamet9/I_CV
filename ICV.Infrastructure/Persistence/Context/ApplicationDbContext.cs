@@ -38,6 +38,8 @@ namespace ICV.Infrastructure.Persistence.Context
 
         public DbSet<UserSkillProgress> UserSkillProgresses { get; set; }
 
+        public DbSet<SkillDevelopmentGoal> SkillDevelopmentGoals { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder) //Bu metodu EF Core, veritabanı modelini oluştururken otomatik çağırır.
         {
             base.OnModelCreating(modelBuilder);

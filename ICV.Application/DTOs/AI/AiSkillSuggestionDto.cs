@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ICV.Domain.Enums;
 
 namespace ICV.Application.DTOs.AI
 {
@@ -28,5 +24,10 @@ namespace ICV.Application.DTOs.AI
         /// AI'ın bu yeteneği neden önerdiğini açıklayan gerekçe.
         /// </summary>
         public string Reason { get; set; } = string.Empty;
+
+        /// <summary>
+        /// AI'ın kullanıcı için önerdiği hedef seviye.
+        /// </summary>
+        public SkillLevel RecommendedTargetLevel { get; set; }
     }
 }

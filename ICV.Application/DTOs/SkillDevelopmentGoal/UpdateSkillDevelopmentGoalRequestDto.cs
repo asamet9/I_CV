@@ -12,9 +12,11 @@ namespace ICV.Application.DTOs.SkillDevelopmentGoal
 
         public SkillLevel TargetLevel { get; set; }
 
-        public DateTime? TargetDate { get; set; }
+        public DevelopmentDuration PreferredDuration { get; set; }
 
-        public int WeeklyHours { get; set; }
+        public bool WantsPaidCourse { get; set; }
+
+        public bool WantsCertificate { get; set; }
 
         public string? Purpose { get; set; }
 
