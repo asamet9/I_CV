@@ -56,5 +56,8 @@ namespace ICV.Domain.Entities
         // Bu hedef bir skill önerisinden geldiyse
         // ilgili SkillSuggestion entity'sini temsil eder.
         public SkillSuggestion? SkillSuggestion { get; set; }
+
+        public ICollection<CourseRecommendation> CourseRecommendations { get; set; }
+        = new List<CourseRecommendation>();
     }
 }

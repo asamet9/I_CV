@@ -48,7 +48,6 @@ namespace ICV.Infrastructure.Persistence.Configurations
             // RECOMMENDED TARGET LEVEL
             // ---------------------------------------------------------
 
-            // AI'nın kullanıcı için önerdiği hedef seviyeyi tutar.
             builder.Property(x => x.RecommendedTargetLevel)
                 .IsRequired();
 
@@ -68,16 +67,6 @@ namespace ICV.Infrastructure.Persistence.Configurations
             builder.HasOne(x => x.Cv)
                 .WithMany(x => x.SkillSuggestions)
                 .HasForeignKey(x => x.CvId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-
-            // ---------------------------------------------------------
-            // COURSE RECOMMENDATION İLİŞKİSİ
-            // ---------------------------------------------------------
-
-            builder.HasMany(x => x.CourseRecommendations)
-                .WithOne(x => x.SkillSuggestion)
-                .HasForeignKey(x => x.SkillSuggestionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
 

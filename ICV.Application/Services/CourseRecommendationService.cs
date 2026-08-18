@@ -1,72 +1,235 @@
-﻿using ICV.Application.DTOs.CourseRecommendation;
+﻿using ICV.Application.DTOs.AI;
+using ICV.Application.DTOs.CourseRecommendation;
+using ICV.Application.Interfaces.AI;
 using ICV.Application.Interfaces.Services;
 using ICV.Application.Interfaces.UnitOfWork;
 using ICV.Domain.Entities;
+using ICV.Domain.Enums;
 
 namespace ICV.Application.Services
 {
     public class CourseRecommendationService : ICourseRecommendationService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IAiProvider _aiProvider;
 
-        public CourseRecommendationService(IUnitOfWork unitOfWork)
+        public CourseRecommendationService(
+            IUnitOfWork unitOfWork,
+            IAiProvider aiProvider)
         {
             _unitOfWork = unitOfWork;
+            _aiProvider = aiProvider;
         }
 
-        // Yeni kurs önerisi oluşturur.
-        public async Task<CourseRecommendationResponseDto> CreateAsync(
-            CreateCourseRecommendationRequestDto request,
-            int userId)
+
+        // =========================================================
+        // AI → GELİŞİM HEDEFİNE KURS ÖNERİLERİ ÜRET
+        // =========================================================
+
+        public async Task<IEnumerable<CourseRecommendationResponseDto>>
+            GenerateForGoalAsync(
+                int skillDevelopmentGoalId,
+                int userId)
         {
-            // SkillSuggestion'ın gerçekten giriş yapan kullanıcıya
-            // ait bir CV üzerinden geldiğini kontrol ediyoruz.
-            var skillSuggestion = await _unitOfWork.SkillSuggestions
+            var goal = await _unitOfWork.SkillDevelopmentGoals
                 .FirstOrDefaultAsync(x =>
-                    x.Id == request.SkillSuggestionId &&
-                    x.Cv.UserId == userId);
+                    x.Id == skillDevelopmentGoalId &&
+                    x.UserId == userId);
 
-            if (skillSuggestion == null)
+            if (goal == null)
+            {
                 throw new UnauthorizedAccessException(
-                    "Bu skill önerisine erişim yetkiniz yok.");
+                    "Bu gelişim hedefine erişim yetkiniz yok.");
+            }
 
-            // Önerilmek istenen kursun sistemde bulunup
-            // bulunmadığını kontrol ediyoruz.
-            var course = await _unitOfWork.Courses
-                .FirstOrDefaultAsync(x =>
-                    x.Id == request.CourseId &&
-                    x.IsActive);
+            var request = new AiCourseSearchRequestDto
+            {
+                SkillName = goal.SkillName,
+                CurrentLevel = (int)goal.CurrentLevel,
+                TargetLevel = (int)goal.TargetLevel,
+                PreferredDuration = (int)goal.PreferredDuration,
+                WantsPaidCourse = goal.WantsPaidCourse,
+                WantsCertificate = goal.WantsCertificate,
+                Purpose = goal.Purpose
+            };
+
+            var aiRecommendations =
+                await _aiProvider.GenerateCourseRecommendationsAsync(
+                    request);
+
+            var results =
+                new List<CourseRecommendationResponseDto>();
+
+
+            foreach (var aiRecommendation in aiRecommendations)
+            {
+                if (string.IsNullOrWhiteSpace(aiRecommendation.Url))
+                    continue;
+                if (!Uri.TryCreate(
+        aiRecommendation.Url,
+        UriKind.Absolute,
+        out var courseUri) ||
+    courseUri.Scheme != Uri.UriSchemeHttps)
+                {
+                    continue;
+                }
+
+                // =================================================
+                // COURSE KONTROLÜ
+                // =================================================
+
+                var existingCourse =
+                    await _unitOfWork.Courses
+                        .FirstOrDefaultAsync(x =>
+                            x.Url == aiRecommendation.Url);
+
+                Course course;
+
+                if (existingCourse == null)
+                {
+                    course = new Course
+                    {
+                        Title = aiRecommendation.Title,
+                        Provider = aiRecommendation.Provider,
+                        Url = aiRecommendation.Url,
+
+                        Category = aiRecommendation.Category,
+
+                        Level = (SkillLevel)aiRecommendation.Level,
+
+                        IsFree = aiRecommendation.IsFree,
+
+                        DurationHours = aiRecommendation.DurationHours,
+
+                        IsActive = true
+                    };
+
+                    await _unitOfWork.Courses
+                        .AddAsync(course);
+
+                    await _unitOfWork
+                        .SaveChangesAsync();
+                }
+                else
+                {
+                    course = existingCourse;
+                }
+
+
+                // =================================================
+                // DUPLICATE KONTROLÜ
+                // =================================================
+
+                var alreadyRecommended =
+                    await _unitOfWork.CourseRecommendations
+                        .AnyAsync(x =>
+                            x.SkillDevelopmentGoalId ==
+                                skillDevelopmentGoalId &&
+                            x.CourseId == course.Id);
+
+                if (alreadyRecommended)
+                    continue;
+
+
+                // =================================================
+                // COURSE RECOMMENDATION
+                // =================================================
+
+                var recommendation =
+                    new CourseRecommendation
+                    {
+                        SkillDevelopmentGoalId =
+                            skillDevelopmentGoalId,
+
+                        CourseId =
+                            course.Id
+                    };
+
+                await _unitOfWork.CourseRecommendations
+                    .AddAsync(recommendation);
+
+                await _unitOfWork
+                    .SaveChangesAsync();
+
+
+                results.Add(
+                    MapToResponse(
+                        recommendation,
+                        course));
+            }
+
+
+            return results;
+        }
+
+
+        // =========================================================
+        // MANUEL COURSE RECOMMENDATION OLUŞTUR
+        // =========================================================
+
+        public async Task<CourseRecommendationResponseDto>
+            CreateAsync(
+                CreateCourseRecommendationRequestDto request,
+                int userId)
+        {
+            var goal =
+                await _unitOfWork.SkillDevelopmentGoals
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == request.SkillDevelopmentGoalId &&
+                        x.UserId == userId);
+
+            if (goal == null)
+            {
+                throw new UnauthorizedAccessException(
+                    "Bu gelişim hedefine erişim yetkiniz yok.");
+            }
+
+
+            var course =
+                await _unitOfWork.Courses
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == request.CourseId &&
+                        x.IsActive);
 
             if (course == null)
+            {
                 throw new KeyNotFoundException(
                     "Önerilmek istenen kurs bulunamadı veya aktif değil.");
+            }
 
-            // Aynı kurs aynı SkillSuggestion için daha önce
-            // önerilmiş mi kontrol ediyoruz.
+
             var alreadyRecommended =
                 await _unitOfWork.CourseRecommendations
                     .AnyAsync(x =>
-                        x.SkillSuggestionId == request.SkillSuggestionId &&
-                        x.CourseId == request.CourseId);
+                        x.SkillDevelopmentGoalId ==
+                            request.SkillDevelopmentGoalId &&
+                        x.CourseId ==
+                            request.CourseId);
 
             if (alreadyRecommended)
-                throw new InvalidOperationException(
-                    "Bu kurs zaten bu skill için önerilmiş.");
-
-            // CourseRecommendation artık kurs bilgilerini
-            // tekrar tutmuyor.
-            // Sadece SkillSuggestion ile Course arasındaki
-            // ilişkiyi oluşturuyoruz.
-            var courseRecommendation = new CourseRecommendation
             {
-                SkillSuggestionId = request.SkillSuggestionId,
-                CourseId = request.CourseId
-            };
+                throw new InvalidOperationException(
+                    "Bu kurs zaten bu gelişim hedefi için önerilmiş.");
+            }
+
+
+            var courseRecommendation =
+                new CourseRecommendation
+                {
+                    SkillDevelopmentGoalId =
+                        request.SkillDevelopmentGoalId,
+
+                    CourseId =
+                        request.CourseId
+                };
+
 
             await _unitOfWork.CourseRecommendations
                 .AddAsync(courseRecommendation);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork
+                .SaveChangesAsync();
+
 
             return MapToResponse(
                 courseRecommendation,
@@ -74,37 +237,49 @@ namespace ICV.Application.Services
         }
 
 
-        // Belirli bir SkillSuggestion'a ait kurs önerilerini getirir.
-        public async Task<IEnumerable<CourseRecommendationResponseDto>> GetAllAsync(
-            int skillSuggestionId,
-            int userId)
-        {
-            // SkillSuggestion'ın kullanıcıya ait olduğunu kontrol ediyoruz.
-            var skillSuggestion = await _unitOfWork.SkillSuggestions
-                .FirstOrDefaultAsync(x =>
-                    x.Id == skillSuggestionId &&
-                    x.Cv.UserId == userId);
+        // =========================================================
+        // GELİŞİM HEDEFİNİN KURSLARINI GETİR
+        // =========================================================
 
-            if (skillSuggestion == null)
+        public async Task<IEnumerable<CourseRecommendationResponseDto>>
+            GetAllAsync(
+                int skillDevelopmentGoalId,
+                int userId)
+        {
+            var goal =
+                await _unitOfWork.SkillDevelopmentGoals
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == skillDevelopmentGoalId &&
+                        x.UserId == userId);
+
+            if (goal == null)
+            {
                 throw new UnauthorizedAccessException(
-                    "Bu skill önerisine erişim yetkiniz yok.");
+                    "Bu gelişim hedefine erişim yetkiniz yok.");
+            }
+
 
             var recommendations =
                 await _unitOfWork.CourseRecommendations
                     .FindAsync(x =>
-                        x.SkillSuggestionId == skillSuggestionId);
+                        x.SkillDevelopmentGoalId ==
+                            skillDevelopmentGoalId);
 
-            var result = new List<CourseRecommendationResponseDto>();
+
+            var result =
+                new List<CourseRecommendationResponseDto>();
+
 
             foreach (var recommendation in recommendations)
             {
-                // Recommendation'ın bağlı olduğu gerçek Course'u getiriyoruz.
-                var course = await _unitOfWork.Courses
-                    .FirstOrDefaultAsync(x =>
-                        x.Id == recommendation.CourseId);
+                var course =
+                    await _unitOfWork.Courses
+                        .FirstOrDefaultAsync(x =>
+                            x.Id == recommendation.CourseId);
 
                 if (course == null)
                     continue;
+
 
                 result.Add(
                     MapToResponse(
@@ -112,30 +287,38 @@ namespace ICV.Application.Services
                         course));
             }
 
+
             return result;
         }
 
 
-        // Tek bir kurs önerisini getirir.
-        public async Task<CourseRecommendationResponseDto?> GetByIdAsync(
-            int courseRecommendationId,
-            int userId)
+        // =========================================================
+        // TEK COURSE RECOMMENDATION GETİR
+        // =========================================================
+
+        public async Task<CourseRecommendationResponseDto?>
+            GetByIdAsync(
+                int courseRecommendationId,
+                int userId)
         {
             var recommendation =
                 await _unitOfWork.CourseRecommendations
                     .FirstOrDefaultAsync(x =>
                         x.Id == courseRecommendationId &&
-                        x.SkillSuggestion.Cv.UserId == userId);
+                        x.SkillDevelopmentGoal.UserId == userId);
 
             if (recommendation == null)
                 return null;
 
-            var course = await _unitOfWork.Courses
-                .FirstOrDefaultAsync(x =>
-                    x.Id == recommendation.CourseId);
+
+            var course =
+                await _unitOfWork.Courses
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == recommendation.CourseId);
 
             if (course == null)
                 return null;
+
 
             return MapToResponse(
                 recommendation,
@@ -143,51 +326,65 @@ namespace ICV.Application.Services
         }
 
 
-        // Kurs önerisini günceller.
-        public async Task<CourseRecommendationResponseDto?> UpdateAsync(
-            int courseRecommendationId,
-            UpdateCourseRecommendationRequestDto request,
-            int userId)
+        // =========================================================
+        // UPDATE
+        // =========================================================
+
+        public async Task<CourseRecommendationResponseDto?>
+            UpdateAsync(
+                int courseRecommendationId,
+                UpdateCourseRecommendationRequestDto request,
+                int userId)
         {
             var recommendation =
                 await _unitOfWork.CourseRecommendations
                     .FirstOrDefaultAsync(x =>
                         x.Id == courseRecommendationId &&
-                        x.SkillSuggestion.Cv.UserId == userId);
+                        x.SkillDevelopmentGoal.UserId == userId);
 
             if (recommendation == null)
                 return null;
 
-            // Yeni Course gerçekten var mı?
-            var course = await _unitOfWork.Courses
-                .FirstOrDefaultAsync(x =>
-                    x.Id == request.CourseId &&
-                    x.IsActive);
+
+            var course =
+                await _unitOfWork.Courses
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == request.CourseId &&
+                        x.IsActive);
 
             if (course == null)
+            {
                 throw new KeyNotFoundException(
                     "Seçilen kurs bulunamadı veya aktif değil.");
+            }
 
-            // Aynı kurs zaten bu SkillSuggestion'a
-            // önerilmiş mi?
+
             var alreadyRecommended =
                 await _unitOfWork.CourseRecommendations
                     .AnyAsync(x =>
                         x.Id != courseRecommendationId &&
-                        x.SkillSuggestionId == recommendation.SkillSuggestionId &&
-                        x.CourseId == request.CourseId);
+                        x.SkillDevelopmentGoalId ==
+                            recommendation.SkillDevelopmentGoalId &&
+                        x.CourseId ==
+                            request.CourseId);
 
             if (alreadyRecommended)
+            {
                 throw new InvalidOperationException(
-                    "Bu kurs zaten bu skill için önerilmiş.");
+                    "Bu kurs zaten bu gelişim hedefi için önerilmiş.");
+            }
 
-            // Sadece ilişkiyi değiştiriyoruz.
-            recommendation.CourseId = request.CourseId;
+
+            recommendation.CourseId =
+                request.CourseId;
+
 
             _unitOfWork.CourseRecommendations
                 .Update(recommendation);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork
+                .SaveChangesAsync();
+
 
             return MapToResponse(
                 recommendation,
@@ -195,65 +392,78 @@ namespace ICV.Application.Services
         }
 
 
-        // Kurs önerisini siler.
-        public async Task<bool> DeleteAsync(
-            int courseRecommendationId,
-            int userId)
+        // =========================================================
+        // DELETE
+        // =========================================================
+
+        public async Task<bool>
+            DeleteAsync(
+                int courseRecommendationId,
+                int userId)
         {
             var recommendation =
                 await _unitOfWork.CourseRecommendations
                     .FirstOrDefaultAsync(x =>
                         x.Id == courseRecommendationId &&
-                        x.SkillSuggestion.Cv.UserId == userId);
+                        x.SkillDevelopmentGoal.UserId == userId);
 
             if (recommendation == null)
                 return false;
 
-            // Burada Course'u silmiyoruz.
-            // Sadece kullanıcının önerisini siliyoruz.
+
             _unitOfWork.CourseRecommendations
                 .Delete(recommendation);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork
+                .SaveChangesAsync();
+
 
             return true;
         }
 
 
-        // Course ve CourseRecommendation bilgilerini
-        // Response DTO'ya dönüştüren ortak metot.
-        private static CourseRecommendationResponseDto MapToResponse(
-            CourseRecommendation recommendation,
-            Course course)
+        // =========================================================
+        // RESPONSE MAPPING
+        // =========================================================
+
+        private static CourseRecommendationResponseDto
+            MapToResponse(
+                CourseRecommendation recommendation,
+                Course course)
         {
             return new CourseRecommendationResponseDto
             {
                 Id = recommendation.Id,
 
-                SkillSuggestionId =
-                    recommendation.SkillSuggestionId,
+                SkillDevelopmentGoalId =
+           recommendation.SkillDevelopmentGoalId,
 
                 CourseId =
-                    recommendation.CourseId,
+           recommendation.CourseId,
 
-                // Bu bilgiler Course tablosundan geliyor.
-                Title = course.Title,
+                Title =
+           course.Title,
 
-                Provider = course.Provider,
+                Provider =
+           course.Provider,
 
-                Url = course.Url,
+                Url =
+           course.Url,
 
-                // Şu an bu alanlar CourseRecommendation tarafında
-                // tutulduğu için burada henüz recommendation'dan
-                // alınamıyor.
-                //
-                // Bunları birazdan netleştireceğiz.
-                Price = default,
-                Level = default,
-                DurationWeeks = 0,
+                Category =
+           course.Category,
+
+                Price =
+           default,
+
+                Level =
+           default,
+
+                DurationWeeks =
+           0,
 
                 CreatedAt =
-                    recommendation.CreatedAt
+           recommendation.CreatedAt
             };
         }
     }

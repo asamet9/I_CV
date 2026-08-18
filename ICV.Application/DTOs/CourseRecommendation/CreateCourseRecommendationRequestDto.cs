@@ -2,10 +2,8 @@
 {
     public class CreateCourseRecommendationRequestDto
     {
-        // Hangi skill önerisi için bu kurs öneriliyor?
-        public int SkillSuggestionId { get; set; }
+        public int SkillDevelopmentGoalId { get; set; }
 
-        // Hangi kurs öneriliyor?
         public int CourseId { get; set; }
     }
 }

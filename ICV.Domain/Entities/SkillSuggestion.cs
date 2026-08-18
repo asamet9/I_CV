@@ -32,9 +32,6 @@ namespace ICV.Domain.Entities
         // Navigation
         public Cv Cv { get; set; } = null!;
 
-        public ICollection<CourseRecommendation> CourseRecommendations { get; set; }
-            = new List<CourseRecommendation>();
-
         public ICollection<UserSkillProgress> UserSkillProgresses { get; set; }
             = new List<UserSkillProgress>();
 

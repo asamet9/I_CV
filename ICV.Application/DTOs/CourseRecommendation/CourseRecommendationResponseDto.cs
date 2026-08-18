@@ -6,7 +6,7 @@ namespace ICV.Application.DTOs.CourseRecommendation
     {
         public int Id { get; set; }
 
-        public int SkillSuggestionId { get; set; }
+        public int SkillDevelopmentGoalId { get; set; }
 
         public int CourseId { get; set; }
 
@@ -24,5 +24,6 @@ namespace ICV.Application.DTOs.CourseRecommendation
         public string Url { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
+        public string? Category { get; set; }
     }
 }

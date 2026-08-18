@@ -36,5 +36,9 @@ namespace ICV.Application.Interfaces.AI
             string cvContent,
             string professionName,
             CancellationToken cancellationToken = default);
+
+        Task<IEnumerable<AiCourseRecommendationDto>> GenerateCourseRecommendationsAsync(
+    AiCourseSearchRequestDto request,
+    CancellationToken cancellationToken = default);
     }
 }

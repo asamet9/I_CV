@@ -13,31 +13,22 @@ namespace ICV.Infrastructure.Persistence.Configurations
 
             builder.HasKey(x => x.Id);
 
-            builder.Property(x => x.Title)
-                .IsRequired()
-                .HasMaxLength(150);
-
-            builder.Property(x => x.Provider)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            builder.Property(x => x.Url)
-                .IsRequired()
-                .HasMaxLength(1000);
-
-
-            // Her kurs önerisi bir SkillSuggestion'a aittir.
-            builder.HasOne(x => x.SkillSuggestion)
+            builder.HasOne(x => x.SkillDevelopmentGoal)
                 .WithMany(x => x.CourseRecommendations)
-                .HasForeignKey(x => x.SkillSuggestionId)
+                .HasForeignKey(x => x.SkillDevelopmentGoalId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
-            // Her kurs önerisi bir Course'a bağlıdır.
             builder.HasOne(x => x.Course)
                 .WithMany(x => x.CourseRecommendations)
                 .HasForeignKey(x => x.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(x => new
+            {
+                x.SkillDevelopmentGoalId,
+                x.CourseId
+            })
+            .IsUnique();
         }
     }
 }
