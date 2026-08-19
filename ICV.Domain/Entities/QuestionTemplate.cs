@@ -10,33 +10,23 @@ namespace ICV.Domain.Entities
 {
     public class QuestionTemplate : BaseEntity
     {
-
         public int ProfessionId { get; set; }
+
         public string Question { get; set; } = string.Empty;
 
         public string QuestionType { get; set; } = string.Empty;
 
-        public bool IsRequired { get; set; } //cevaplaması zorunlu mu? 
+        public bool IsRequired { get; set; }
 
-        public Profession Profession { get; set; } = null!;    // Navigation Property
-                                                               // EF Core sayesinde QuestionTemplate -> Profession ilişkisini kurar.
-                                                               // Veritabanında kolon oluşturmaz, kod tarafındaki ilişkiyi temsil eder.
+        public Profession Profession { get; set; } = null!;
 
-
-        // Kullanıcının CV'sinde aranacak gerçek değer.
-        //
-        // Question kullanıcıya gösterilecek soru:
-        // "C# biliyor musun?"
-        //
-        // ExpectedValue ise analiz sırasında aranacak değer:
-        // "C#"
-        //
-        // Böylece kullanıcıya gösterilen soru ile
-        // sistemin aradığı skill birbirinden ayrılmış olur.
         public string? ExpectedValue { get; set; }
 
-        // Skill'in hangi kategoriye ait olduğunu belirtir.
-        // Örn: Programming, DevOps, Database, Language, Soft Skill...
         public string? Category { get; set; }
+
+        // Bu soruya ait seçenekler
+        public ICollection<QuestionOption> Options { get; set; }
+            = new List<QuestionOption>();
+
     }
 }

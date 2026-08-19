@@ -36,6 +36,9 @@ namespace ICV.Infrastructure.Persistence.Context
 
         public DbSet<QuestionTemplate> QuestionTemplates { get; set; }
 
+        public DbSet<QuestionOption> QuestionOptions { get; set; }
+        public DbSet<UserCvAnswer> UserCvAnswers { get; set; }
+
         public DbSet<UserSkillProgress> UserSkillProgresses { get; set; }
 
         public DbSet<SkillDevelopmentGoal> SkillDevelopmentGoals { get; set; }

@@ -33,7 +33,9 @@ namespace ICV.Application.Interfaces.UnitOfWork
 
         IGenericRepository<SkillDevelopmentGoal> SkillDevelopmentGoals { get; }
 
+        IGenericRepository<UserCvAnswer> UserCvAnswers { get; }
         ICourseRepository Courses { get; }
+        IGenericRepository<QuestionOption> QuestionOptions { get; }
 
         Task<int> SaveChangesAsync();
         void Dispose();

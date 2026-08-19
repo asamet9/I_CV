@@ -13,6 +13,9 @@ namespace ICV.Application.DTOs.QuestionTemplate
         public string QuestionType { get; set; } = string.Empty;
 
         public bool IsRequired { get; set; }
+
+        public string? ExpectedValue { get; set; }
+
         public string? Category { get; set; }
     }
 }

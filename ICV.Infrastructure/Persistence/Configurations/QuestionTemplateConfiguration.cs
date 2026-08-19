@@ -22,16 +22,15 @@ namespace ICV.Infrastructure.Persistence.Configurations
 
             // Her soru bir mesleğe aittir.
             builder.HasOne(x => x.Profession)
-                .WithMany(x => x.QuestionTemplates)
-                .HasForeignKey(x => x.ProfessionId)
-                .OnDelete(DeleteBehavior.Cascade);
+             .WithMany(x => x.QuestionTemplates)
+             .HasForeignKey(x => x.ProfessionId)
+             .OnDelete(DeleteBehavior.Cascade);
 
             builder.Property(x => x.ExpectedValue)
                 .HasMaxLength(200);
 
             builder.Property(x => x.Category)
-    .HasMaxLength(50);
-
+                .HasMaxLength(50);
         }
     }
 }

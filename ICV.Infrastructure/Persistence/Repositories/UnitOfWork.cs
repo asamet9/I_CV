@@ -27,6 +27,10 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
         public IUserSkillProgressRepository UserSkillProgresses { get; }
 
+        
+public IGenericRepository<UserCvAnswer> UserCvAnswers { get; }
+
+
         public ICvAnalysisRepository CvAnalyses { get; }
 
         public IGenericRepository<SkillDevelopmentGoal>
@@ -34,7 +38,7 @@ namespace ICV.Infrastructure.Persistence.Repositories
         { get; }
 
         public ICourseRepository Courses { get; }
-
+        public IGenericRepository<QuestionOption> QuestionOptions { get; }
         public UnitOfWork(
             ApplicationDbContext context,
             IUserRepository userRepository,
@@ -70,6 +74,12 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
             SkillSuggestions =
                 skillSuggestionRepository;
+
+            QuestionOptions = new GenericRepository<QuestionOption>(_context);
+          
+UserCvAnswers = new GenericRepository<UserCvAnswer>(_context);
+
+
 
             CourseRecommendations =
                 courseRecommendationRepository;

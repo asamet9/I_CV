@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ICV.Application.DTOs.QuestionOption;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,8 +19,13 @@ namespace ICV.Application.DTOs.QuestionTemplate
 
         public bool IsRequired { get; set; }
 
+        public string? ExpectedValue { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public string? Category { get; set; }
+
+        public List<QuestionOptionResponseDto> Options { get; set; }
+            = new();
     }
 }

@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Persistence\Migrations\**" />
+    <EmbeddedResource Remove="Persistence\Migrations\**" />
+    <None Remove="Persistence\Migrations\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ICV.Application\ICV.Application.csproj" />
     <ProjectReference Include="..\ICV.Domain\ICV.Domain.csproj" />
     <ProjectReference Include="..\ICV.Shared\ICV.Shared.csproj" />
@@ -14,7 +20,6 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
-    <Folder Include="Persistence\Migrations\" />
     <Folder Include="Services\FileParsing\" />
     <Folder Include="Services\Export\" />
   </ItemGroup>
