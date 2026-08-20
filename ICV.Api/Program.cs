@@ -110,7 +110,7 @@ builder.Services.AddScoped<ISkillSuggestionService, SkillSuggestionService>();
 builder.Services.AddScoped<ICourseRecommendationService, CourseRecommendationService>();
 builder.Services.AddScoped<IUserSkillProgressService, UserSkillProgressService>();
 builder.Services.AddScoped<IUserCvAnswerService, UserCvAnswerService>();
-
+builder.Services.AddScoped<ICvBuilderService, CvBuilderService>();
 
 builder.Services.AddScoped<ICvAnalysisService, CvAnalysisService>();
 
