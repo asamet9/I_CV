@@ -1,226 +1,130 @@
 ﻿using ICV.Application.DTOs.CvAnalysis;
+using ICV.Application.Interfaces.AI;
 using ICV.Application.Interfaces.Services;
 using ICV.Application.Interfaces.UnitOfWork;
 using ICV.Domain.Entities;
+using System.Text.Json;
 
 namespace ICV.Application.Services
 {
-    /// <summary>
-    /// CV analiz işlemlerini gerçekleştiren servistir.
-    /// CRUD işlemlerinden farklı olarak projenin
-    /// CV analiz iş mantığını burada yönetiyoruz.
-    /// </summary>
     public class CvAnalysisService : ICvAnalysisService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ISkillSuggestionService _skillSuggestionService; // Eksik skill'leri öneriye dönüştürmek için kullanıyoruz.
+        private readonly IAiProvider _aiProvider;
+        private readonly ISkillSuggestionService _skillSuggestionService;
 
         public CvAnalysisService(
             IUnitOfWork unitOfWork,
+            IAiProvider aiProvider,
             ISkillSuggestionService skillSuggestionService)
         {
             _unitOfWork = unitOfWork;
+            _aiProvider = aiProvider;
             _skillSuggestionService = skillSuggestionService;
         }
 
-        /// <summary>
-        /// CV'yi seçilen mesleğe göre analiz eder.
-        /// </summary>
         public async Task<CvAnalysisResponseDto> AnalyzeAsync(
             int cvId,
             AnalyzeCvRequestDto request,
             int userId)
         {
-
-            // CV'yi buluyor ve aynı anda CV'nin giriş yapan kullanıcıya ait
-            // olup olmadığını kontrol ediyoruz.
-            // Önce sadece CV ID'sine göre CV'yi buluyoruz.
             var cv = await _unitOfWork.Cvs
-        .FirstOrDefaultAsync(x =>
-            x.Id == cvId &&
-            x.UserId == userId);
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
 
-            // CV yoksa veya başka kullanıcıya aitse erişime izin vermiyoruz.
             if (cv == null)
             {
                 throw new UnauthorizedAccessException(
                     "Bu CV'ye erişim yetkiniz yok.");
             }
 
-
-            // Kullanıcının seçtiği mesleği veritabanından buluyoruz.
             var profession = await _unitOfWork.Professions
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.ProfessionId);
 
-            // Meslek bulunamadıysa analiz yapılamaz.
             if (profession == null)
             {
                 throw new KeyNotFoundException(
                     "Belirtilen meslek bulunamadı.");
             }
 
+            var cvForAi = await BuildCvForAiAsync(
+                cvId,
+                userId);
 
-            // Seçilen mesleğe ait analiz kriterlerini getiriyoruz.
-            var questionTemplates = await _unitOfWork.QuestionTemplates
-                .FindAsync(x =>
-                    x.ProfessionId == request.ProfessionId);
-
-            // Mesleğe ait hiç kriter yoksa CV'yi değerlendiremeyiz.
-            if (!questionTemplates.Any())
+            if (!cvForAi.Sections.Any(x => x.Items.Any()) &&
+                string.IsNullOrWhiteSpace(cvForAi.Summary))
             {
                 throw new InvalidOperationException(
-                    "Bu meslek için henüz analiz kriteri tanımlanmamış.");
+                    "Bu CV içerisinde analiz edilecek veri bulunamadı.");
             }
-
-
-            // CV'nin içerisindeki bölümleri getiriyoruz.
-            var cvSections = await _unitOfWork.CvSections
-                .FindAsync(x =>
-                    x.CvId == cvId);
-
-            // CV içerisinde hiç bölüm yoksa analiz edilecek veri yoktur.
-            if (!cvSections.Any())
-            {
-                throw new InvalidOperationException(
-                    "Bu CV içerisinde analiz edilecek bölüm bulunamadı.");
-            }
-
-
-            // Section'ların içerisindeki gerçek CV kayıtlarını getiriyoruz.
-            var cvSectionItems = await _unitOfWork.CvSectionItems
-                .FindAsync(x =>
-                    cvSections
-                        .Select(s => s.Id)
-                        .Contains(x.CvSectionId));
-
-            // Section var ama içerisinde hiç kayıt yoksa analiz yapamayız.
-            if (!cvSectionItems.Any())
-            {
-                throw new InvalidOperationException(
-                    "Bu CV içerisinde analiz edilecek kayıt bulunamadı.");
-            }
-
-
-            // CV'de bulunan ve meslek kriterleriyle eşleşen
-            // kriterlerin isimlerini burada tutacağız.
-            var matchedTemplates = new List<string>();
-
-            // CV'de bulunamayan meslek kriterlerini burada tutacağız.
-           var missingTemplates = new List<MissingSkillDto>();
-
-
-            // Her meslek kriterini tek tek kontrol ediyoruz.
-            foreach (var template in questionTemplates)
-            {
-                // ExpectedValue boşsa sistemin CV'de ne arayacağını
-                // bilemeyeceğimiz için bu kriteri atlıyoruz.
-                if (string.IsNullOrWhiteSpace(template.ExpectedValue))
-                {
-                    continue;
-                }
-
-                // Aranacak değeri standart hale getiriyoruz.
-                // Örneğin " ASP.NET Core " → "asp.net core"
-                var expectedValue = NormalizeText(
-                    template.ExpectedValue);
-
-                // Başlangıçta kriterin CV'de bulunmadığını varsayıyoruz.
-                bool isMatched = false;
-
-
-                // CV içerisindeki bütün kayıtları tek tek kontrol ediyoruz.
-                foreach (var item in cvSectionItems)
-                {
-                    // CV item'ının başlığını standart hale getiriyoruz.
-                    var title = NormalizeText(item.Title);
-
-                    // CV item'ının açıklamasını standart hale getiriyoruz.
-                    var description = NormalizeText(item.Description);
-
-                    // Aradığımız değer başlıkta veya açıklamada
-                    // bulunuyorsa kriter eşleşmiş demektir.
-                    if (title.Contains(expectedValue) ||
-                        description.Contains(expectedValue))
-                    {
-                        isMatched = true;
-                        break; // Aynı kriteri tekrar aramaya gerek yok.
-                    }
-                }
-
-
-                // Kriter CV'de bulunduysa matched listesine ekliyoruz.
-                if (isMatched)
-                {
-                    matchedTemplates.Add(template.ExpectedValue);
-                }
-                // Bulunamadıysa missing listesine ekliyoruz.
-                else
-                {
-                    missingTemplates.Add(new MissingSkillDto
-                    {
-                        Skill = template.ExpectedValue,
-                        Category = template.Category
-                    });
-                }
-            }
-
-
-            // Şimdilik burada duruyoruz.
-            // Bir sonraki aşamada bu iki listenin sayılarını kullanarak
-            // MatchedSkillCount, MissingSkillCount ve Score hesaplayacağız.
-            // Eşleşen kriterlerin toplam sayısını alıyoruz.
-            var matchedSkillCount = matchedTemplates.Count;
-
-            // Eksik kriterlerin toplam sayısını alıyoruz.
-            var missingSkillCount = missingTemplates.Count;
-
-            // Toplam değerlendirilen kriter sayısını hesaplıyoruz.
-            var totalSkillCount =
-                matchedSkillCount + missingSkillCount;
-
-
-            // Hiçbir kriter değerlendirilemediyse sıfıra bölme
-            // hatası yaşamamak için skoru 0 olarak belirliyoruz.
-            decimal score = totalSkillCount == 0
-                ? 0
-                : (decimal)matchedSkillCount / totalSkillCount * 100;
 
             // ---------------------------------------------------------
-            // 8. ANALİZ SONUCUNU OLUŞTUR
+            // 1. CV'NİN GENEL ANALİZİ
             // ---------------------------------------------------------
 
-            // Hesapladığımız analiz sonuçlarını CvAnalysis entity'sine
-            // aktarıyoruz.
-            //
-            // Bu nesne henüz veritabanına kaydedilmiş değil.
-            // Sadece kaydedilecek veriyi hazırlıyoruz.
+            var aiResult = await _aiProvider.GenerateCvAnalysisAsync(
+                cvForAi,
+                profession.Name);
+
+            var matchedSkills = aiResult.Strengths
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // ---------------------------------------------------------
+            // 2. KULLANICIYA ÖZEL GELİŞİM ÖNERİLERİ
+            // ---------------------------------------------------------
+
+            var cvContent = JsonSerializer.Serialize(
+                cvForAi,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+            var skillSuggestions =
+                await _skillSuggestionService.GenerateFromAiAsync(
+                    cvId,
+                    cvContent,
+                    profession.Name,
+                    userId);
+
+            // AI'ın gerçekten kullanıcıya önerdiği skill'ler
+            // MissingSkills olarak response'a aktarılır.
+            var missingSkills = skillSuggestions
+                .Where(x => !string.IsNullOrWhiteSpace(x.SuggestedSkill))
+                .Select(x => new MissingSkillDto
+                {
+                    Skill = x.SuggestedSkill,
+                    Category = x.Category
+                })
+                .ToList();
+
+            // ---------------------------------------------------------
+            // 3. CV ANALİZ KAYDI
+            // ---------------------------------------------------------
+
             var analysis = new CvAnalysis
             {
-                CvId = cvId,                                      // Analiz edilen CV
-                ProfessionId = request.ProfessionId,             // Analiz yapılan meslek
-                MatchedSkillCount = matchedSkillCount,            // Eşleşen kriter sayısı
-                MissingSkillCount = missingSkillCount,            // Eksik kriter sayısı
-                Score = score                                     // Hesaplanan skor
+                CvId = cvId,
+                ProfessionId = request.ProfessionId,
+
+                MatchedSkillCount = matchedSkills.Count,
+
+                MissingSkillCount = missingSkills.Count,
+
+                Score = aiResult.Score
             };
 
-            // ---------------------------------------------------------
-            // 9. EKSİK BECERİLER İÇİN ÖNERİ OLUŞTUR
-            // ---------------------------------------------------------
-
-            // CV analizinde bulunamayan her kriter için
-            // kullanıcıya bir SkillSuggestion oluşturuyoruz.
-            await _skillSuggestionService.GenerateFromAnalysisAsync(
-            cvId,
-            missingTemplates,
-            userId);
-
-            // Analiz sonucunu veritabanına eklenmek üzere
-            // CvAnalysis repository'sine gönderiyoruz.
             await _unitOfWork.CvAnalyses.AddAsync(analysis);
-    
-            // Yapılan değişiklikleri SQL Server'a kaydediyoruz.
+
             await _unitOfWork.SaveChangesAsync();
+
+            // ---------------------------------------------------------
+            // 4. RESPONSE
+            // ---------------------------------------------------------
 
             return new CvAnalysisResponseDto
             {
@@ -228,33 +132,80 @@ namespace ICV.Application.Services
                 CvId = analysis.CvId,
                 ProfessionId = analysis.ProfessionId,
 
-                ProfessionName = profession.Name, // Analizin hangi meslek için yapıldığını response'a ekliyoruz.
+                ProfessionName = profession.Name,
 
                 MatchedSkillCount = analysis.MatchedSkillCount,
                 MissingSkillCount = analysis.MissingSkillCount,
+
                 Score = analysis.Score,
 
-                CreatedAt = analysis.CreatedAt, // Analizin oluşturulma tarihini response'a ekliyoruz.
+                CreatedAt = analysis.CreatedAt,
 
-                MatchedSkills = matchedTemplates,
-                MissingSkills = missingTemplates,
+                MatchedSkills = matchedSkills,
+
+                MissingSkills = missingSkills
             };
-
         }
 
-
-        // Metinleri karşılaştırmadan önce standart hale getiriyoruz.
-        private static string NormalizeText(string? text)
+        private async Task<CvForAiAnalysisDto> BuildCvForAiAsync(
+            int cvId,
+            int userId)
         {
-            // Null veya boş metin varsa boş string döndürüyoruz.
-            if (string.IsNullOrWhiteSpace(text))
+            var cv = await _unitOfWork.Cvs
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
+
+            if (cv == null)
             {
-                return string.Empty;
+                throw new UnauthorizedAccessException(
+                    "Bu CV'ye erişim yetkiniz yok.");
             }
 
-            // Baştaki/sondaki boşlukları temizliyor ve
-            // tüm karakterleri küçük harfe çeviriyoruz.
-            return text.Trim().ToLowerInvariant();
+            var sections = await _unitOfWork.CvSections
+                .FindAsync(x => x.CvId == cvId);
+
+            var sectionIds = sections
+                .Select(x => x.Id)
+                .ToList();
+
+            var items = await _unitOfWork.CvSectionItems
+                .FindAsync(x =>
+                    sectionIds.Contains(x.CvSectionId));
+
+            var result = new CvForAiAnalysisDto
+            {
+                CvId = cv.Id,
+                Title = cv.Title,
+                Summary = cv.Summary
+            };
+
+            foreach (var section in sections.OrderBy(x => x.OrderIndex))
+            {
+                var sectionDto = new CvAiSectionDto
+                {
+                    SectionType = section.Type.ToString()
+                };
+
+                var sectionItems = items
+                    .Where(x => x.CvSectionId == section.Id)
+                    .ToList();
+
+                foreach (var item in sectionItems)
+                {
+                    sectionDto.Items.Add(new CvAiItemDto
+                    {
+                        Title = item.Title,
+                        Description = item.Description,
+                        StartDate = item.StartDate,
+                        EndDate = item.EndDate
+                    });
+                }
+
+                result.Sections.Add(sectionDto);
+            }
+
+            return result;
         }
     }
 }

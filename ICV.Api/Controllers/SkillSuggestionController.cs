@@ -165,46 +165,7 @@ namespace ICV.Api.Controllers
             return NoContent();
         }
 
-        // Gemini AI kullanarak CV için yeni skill önerileri oluşturur.
-        [HttpPost("ai-generate")]
-        public async Task<IActionResult> GenerateFromAi(
-            [FromBody] GenerateAiSkillSuggestionRequestDto request)
-        {
-            // JWT içerisinden giriş yapan kullanıcının ID'sini alıyoruz.
-            var userIdClaim = User.FindFirst(
-                ClaimTypes.NameIdentifier);
-
-            // Kullanıcı ID'si JWT içerisinde yoksa yetkisiz cevap döndürüyoruz.
-            if (userIdClaim == null)
-                return Unauthorized();
-
-            // JWT içerisindeki kullanıcı ID'sini integer'a çevirmeyi deniyoruz.
-            if (!int.TryParse(
-                    userIdClaim.Value,
-                    out var userId))
-            {
-                return Unauthorized();
-            }
-
-            try
-            {
-                // SkillSuggestionService üzerinden
-                // Gemini AI analizini başlatıyoruz.
-                var result = await _skillSuggestionService
-                    .GenerateFromAiAsync(
-                        request.CvId,
-                        request.CvContent,
-                        request.ProfessionName,
-                        userId);
-
-                // Oluşturulan skill önerilerini API response olarak döndürüyoruz.
-                return Ok(result);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Kullanıcı CV'nin sahibi değilse Forbidden döndürüyoruz.
-                return Forbid();
-            }
-        }
+       
+        
     }
 }

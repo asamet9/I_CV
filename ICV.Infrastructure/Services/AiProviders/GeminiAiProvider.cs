@@ -1,6 +1,7 @@
 ﻿using Google.GenAI;
 using Google.GenAI.Types;
 using ICV.Application.DTOs.AI;
+using ICV.Application.DTOs.CvAnalysis;
 using ICV.Application.Interfaces.AI;
 using ICV.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
@@ -10,9 +11,6 @@ using SchemaType = Google.GenAI.Types.Type;
 
 namespace ICV.Infrastructure.Services.AiProviders
 {
-    /// <summary>
-    /// Google Gemini API ile iletişim kuran AI provider sınıfıdır.
-    /// </summary>
     public class GeminiAiProvider : IAiProvider
     {
         private readonly GeminiOptions _options;
@@ -34,9 +32,9 @@ namespace ICV.Infrastructure.Services.AiProviders
         }
 
         public async Task<IEnumerable<AiSkillSuggestionDto>> GenerateSkillSuggestionsAsync(
-            string cvContent,
-            string professionName,
-            CancellationToken cancellationToken = default)
+      string cvContent,
+      string professionName,
+      CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(cvContent))
             {
@@ -61,146 +59,288 @@ namespace ICV.Infrastructure.Services.AiProviders
                     Type = SchemaType.Object,
 
                     Properties = new Dictionary<string, Schema>
+            {
+                {
+                    "skill",
+                    new Schema
                     {
-                        {
-                            "skill",
-                            new Schema
-                            {
-                                Type = SchemaType.String,
-                                Title = "Skill"
-                            }
-                        },
+                        Type = SchemaType.String,
+                        Title = "Suggested Skill"
+                    }
+                },
 
-                        {
-                            "category",
-                            new Schema
-                            {
-                                Type = SchemaType.String,
-                                Title = "Category"
-                            }
-                        },
+                {
+                    "category",
+                    new Schema
+                    {
+                        Type = SchemaType.String,
+                        Title = "Category"
+                    }
+                },
 
-                        {
-                            "reason",
-                            new Schema
-                            {
-                                Type = SchemaType.String,
-                                Title = "Reason"
-                            }
-                        },
+                {
+                    "reason",
+                    new Schema
+                    {
+                        Type = SchemaType.String,
+                        Title = "Reason"
+                    }
+                },
 
-                        {
-                            "recommendedTargetLevel",
-                            new Schema
-                            {
-                                Type = SchemaType.Integer,
-                                Title = "Recommended Target Level"
-                            }
-                        }
-                    },
+                {
+                    "recommendedTargetLevel",
+                    new Schema
+                    {
+                        Type = SchemaType.Integer,
+                        Title = "Recommended Target Level"
+                    }
+                }
+            },
 
                     Required = new List<string>
-                    {
-                       "category",
-    "title",
-    "provider",
-    "url",
-    "reason",
-    "level",
-    "isFree",
-    "durationHours"
-                    },
+            {
+                "skill",
+                "category",
+                "reason",
+                "recommendedTargetLevel"
+            },
 
                     PropertyOrdering = new List<string>
-{
-    "category",
-    "title",
-    "provider",
-    "url",
-    "reason",
-    "level",
-    "isFree",
-    "durationHours"
-}
+            {
+                "skill",
+                "category",
+                "reason",
+                "recommendedTargetLevel"
+            }
                 }
             };
 
             var prompt = $"""
-                You are an expert career advisor and CV analyzer.
+        You are an expert career advisor.
 
-                Analyze the following CV for the profession: {professionName}
+        Your task is NOT to find generic missing skills.
 
-                Identify the most valuable technical or professional skills
-                that the candidate should develop.
+        Your task is to analyze the candidate's complete CV and recommend
+        additional skills that would provide REAL VALUE to this specific
+        candidate's career.
 
-                Rules:
+        TARGET PROFESSION:
+        {professionName}
 
-                - Suggest only relevant skills.
-                - Do not suggest skills the candidate already clearly demonstrates.
-                - Focus on skills that improve employability.
-                - Avoid duplicate skills.
-                - Keep the number of suggestions between 3 and 8.
+        COMPLETE CV:
+        {cvContent}
 
-                Category should be a short category name such as:
-                Backend, Frontend, DevOps, Database, Programming,
-                Cloud, Testing or Security.
 
-                Reason should briefly explain why the skill is valuable
-                for this candidate.
+        IMPORTANT:
 
-                For every suggested skill, determine the recommended target
-                level for this specific candidate.
+        Analyze the candidate as an individual.
 
-                Skill levels are strictly represented by integers:
+        Consider:
 
-                1 = Beginner
-                2 = Intermediate
-                3 = Advanced
+        - Education
+        - Current profession
+        - Work experience
+        - Projects
+        - Existing technical skills
+        - Programming languages
+        - Software/tools
+        - Certificates
+        - Languages
+        - Current career level
+        - Technologies already used
+        - Technologies demonstrated through projects
+        - Career direction that can reasonably be inferred
 
-                For recommendedTargetLevel:
-                - You MUST return exactly one integer: 1, 2, or 3.
-                - Never return the text "Beginner", "Intermediate", or "Advanced".
-                - Never return any other number.
 
-                The recommended target level should represent the level
-                the candidate should reasonably aim for based on:
-                - their current CV
-                - their existing technical experience
-                - the profession
-                - the importance of the skill
-                - realistic career development
+        CORE RULE:
 
-                Do not automatically recommend Advanced.
-                Recommend Advanced only when it is realistically appropriate
-                for the candidate and profession.
+        Recommend skills that are useful additions to THIS candidate's
+        existing profile.
 
-                Return ONLY the requested JSON structure.
-                                COURSE CATEGORY:
+        Do NOT simply list skills that are commonly required for the profession.
 
-                - Every course MUST have exactly one category.
-                - The category must describe the main technical area of the course.
-                - Use ONLY one of the following categories:
 
-                Backend
-                Frontend
-                DevOps
-                Database
-                Programming
-                Cloud
-                Testing
-                Security
-                Mobile
-                AI
-                Data Science
-                Tools
+        VERY IMPORTANT:
 
-                - Do not invent new category names.
-                - Do not return null or empty category.
-                - The category must be relevant to the requested skill.
+        A skill being common or popular in the profession does NOT mean
+        that it should automatically be recommended.
 
-                CV:
-                {cvContent}
-                """;
+        The recommendation must provide meaningful additional value.
+
+
+        EXISTING SKILLS:
+
+        Carefully identify skills the candidate already knows.
+
+        A skill must NOT be recommended if the candidate clearly demonstrates
+        knowledge or practical experience with it.
+
+        Consider indirect evidence too.
+
+        For example:
+
+        If the candidate has several ASP.NET Core projects,
+        do not recommend ASP.NET Core.
+
+        If the candidate already demonstrates SQL through projects,
+        do not recommend SQL.
+
+        If the candidate already knows English,
+        do not recommend English again.
+
+
+        USEFUL ADDITIONAL SKILLS:
+
+        Good recommendations can include things such as:
+
+        - A new programming language
+        - A useful software/tool
+        - A complementary technology
+        - A cloud technology
+        - A useful engineering tool
+        - A professional language
+        - A certification-related skill
+        - A domain-specific technology
+        - A skill that expands employment opportunities
+        - A skill that complements the candidate's existing profile
+
+
+        EXAMPLE:
+
+        If a Mechanical Engineer already knows:
+
+        - English
+        - SolidWorks
+        - AutoCAD
+
+        You may recommend:
+
+        German
+
+        because German can provide additional opportunities in
+        German-speaking engineering companies and international
+        manufacturing environments.
+
+        Do NOT recommend AutoCAD or SolidWorks because the candidate
+        already knows them.
+
+
+        ANOTHER EXAMPLE:
+
+        If a Computer Engineer already knows:
+
+        - C#
+        - ASP.NET Core
+        - SQL Server
+        - Git
+
+        You may recommend:
+
+        - Docker
+        - Azure
+        - Redis
+        - React
+        - CI/CD
+
+        But only if the recommendation makes sense for the candidate's
+        existing profile and career direction.
+
+
+        DO NOT:
+
+        - Recommend random trendy technologies.
+        - Recommend skills only because they are frequently requested
+          in job advertisements.
+        - Recommend skills the candidate already clearly knows.
+        - Recommend duplicate skills.
+        - Recommend generic skills such as "communication" unless the CV
+          provides a strong reason for it.
+        - Recommend too many skills.
+
+
+        NUMBER OF RECOMMENDATIONS:
+
+        Return between 3 and 8 recommendations.
+
+        Prefer quality over quantity.
+
+        If only 4 recommendations are genuinely valuable,
+        return 4 instead of inventing additional recommendations.
+
+
+        CATEGORY:
+
+        Use one concise category.
+
+        Examples:
+
+        Backend
+        Frontend
+        DevOps
+        Database
+        Programming
+        Cloud
+        Testing
+        Security
+        Mobile
+        AI
+        Data Science
+        Tools
+        Languages
+        Engineering
+        CAD
+        Manufacturing
+        Simulation
+        Quality
+        Optimization
+
+
+        REASON:
+
+        For every recommendation, explain specifically why this skill
+        would benefit THIS candidate.
+
+        The reason should be personalized.
+
+        Do not use generic explanations.
+
+        Example:
+
+        BAD:
+        "German is useful for engineers."
+
+        GOOD:
+        "Because the candidate already has English proficiency and a
+        Mechanical Engineering background, German would expand access
+        to engineering and manufacturing opportunities in Germany,
+        Austria and Switzerland."
+
+
+        TARGET LEVEL:
+
+        Recommend the level the candidate should realistically aim for.
+
+        1 = Beginner
+        2 = Intermediate
+        3 = Advanced
+
+        Return ONLY the integer.
+
+        Do not automatically recommend Advanced.
+
+        The target level should depend on:
+
+        - Candidate's current experience
+        - Importance of the skill
+        - Difficulty of the skill
+        - Profession
+        - Career direction
+
+
+        OUTPUT:
+
+        Return ONLY the JSON structure defined by the schema.
+        """;
 
             var response = await _client.Models.GenerateContentAsync(
                 model: _options.Model,
@@ -243,9 +383,9 @@ namespace ICV.Infrastructure.Services.AiProviders
         }
 
         public async Task<IEnumerable<AiCourseRecommendationDto>>
-     GenerateCourseRecommendationsAsync(
-         AiCourseSearchRequestDto request,
-         CancellationToken cancellationToken = default)
+            GenerateCourseRecommendationsAsync(
+                AiCourseSearchRequestDto request,
+                CancellationToken cancellationToken = default)
         {
             if (request == null)
             {
@@ -268,196 +408,190 @@ namespace ICV.Infrastructure.Services.AiProviders
                     Type = SchemaType.Object,
 
                     Properties = new Dictionary<string, Schema>
-            {
+                    {
+                        {
+                            "category",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Course Category"
+                            }
+                        },
 
                         {
-                         "category",
-    new Schema
-    {
-        Type = SchemaType.String,
-        Title = "Course Category"
-    }
-},
-                {
-                    "title",
-                    new Schema
-                    {
-                        Type = SchemaType.String,
-                        Title = "Course Title"
-                    }
-                },
+                            "title",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Course Title"
+                            }
+                        },
 
-                {
-                    "provider",
-                    new Schema
-                    {
-                        Type = SchemaType.String,
-                        Title = "Course Provider"
-                    }
-                },
+                        {
+                            "provider",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Course Provider"
+                            }
+                        },
 
-                {
-                    "url",
-                    new Schema
-                    {
-                        Type = SchemaType.String,
-                        Title = "Course URL"
-                    }
-                },
+                        {
+                            "url",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Course URL"
+                            }
+                        },
 
-                {
-                    "reason",
-                    new Schema
-                    {
-                        Type = SchemaType.String,
-                        Title = "Recommendation Reason"
-                    }
-                },
+                        {
+                            "reason",
+                            new Schema
+                            {
+                                Type = SchemaType.String,
+                                Title = "Recommendation Reason"
+                            }
+                        },
 
-                {
-                    "level",
-                    new Schema
-                    {
-                        Type = SchemaType.Integer,
-                        Title = "Course Level"
-                    }
-                },
+                        {
+                            "level",
+                            new Schema
+                            {
+                                Type = SchemaType.Integer,
+                                Title = "Course Level"
+                            }
+                        },
 
-                {
-                    "isFree",
-                    new Schema
-                    {
-                        Type = SchemaType.Boolean,
-                        Title = "Is Free"
-                    }
-                },
+                        {
+                            "isFree",
+                            new Schema
+                            {
+                                Type = SchemaType.Boolean,
+                                Title = "Is Free"
+                            }
+                        },
 
-                {
-                    "durationHours",
-                    new Schema
-                    {
-                        Type = SchemaType.Integer,
-                        Title = "Estimated Duration Hours"
-                    }
-                }
-            },
+                        {
+                            "durationHours",
+                            new Schema
+                            {
+                                Type = SchemaType.Integer,
+                                Title = "Estimated Duration Hours"
+                            }
+                        }
+                    },
 
                     Required = new List<string>
-            {
-                "title",
-                "provider",
-                "url",
-                "reason",
-                "level",
-                "isFree",
-                "durationHours"
-            },
+                    {
+                        "category",
+                        "title",
+                        "provider",
+                        "url",
+                        "reason",
+                        "level",
+                        "isFree",
+                        "durationHours"
+                    },
 
                     PropertyOrdering = new List<string>
-            {
-                "title",
-                "provider",
-                "url",
-                "reason",
-                "level",
-                "isFree",
-                "durationHours"
-            }
+                    {
+                        "category",
+                        "title",
+                        "provider",
+                        "url",
+                        "reason",
+                        "level",
+                        "isFree",
+                        "durationHours"
+                    }
                 }
             };
 
             var prompt = $"""
-        You are an expert career development advisor.
+                You are an expert career development advisor.
 
-        Recommend real online courses for the user's skill development goal.
+                Recommend real online courses for the user's skill development goal.
 
-        USER DEVELOPMENT GOAL:
+                USER DEVELOPMENT GOAL:
 
-        Skill: {request.SkillName}
+                Skill: {request.SkillName}
 
-        Current Level: {request.CurrentLevel}
+                Current Level: {request.CurrentLevel}
 
-        Target Level: {request.TargetLevel}
+                Target Level: {request.TargetLevel}
 
-        Preferred Duration: {request.PreferredDuration}
+                Preferred Duration: {request.PreferredDuration}
 
-        Wants Paid Course: {request.WantsPaidCourse}
+                Wants Paid Course: {request.WantsPaidCourse}
 
-        Wants Certificate: {request.WantsCertificate}
+                Wants Certificate: {request.WantsCertificate}
 
-        Purpose: {request.Purpose ?? "Not specified"}
+                Purpose: {request.Purpose ?? "Not specified"}
 
+                IMPORTANT RULES:
 
-        IMPORTANT RULES:
+                - Recommend only real courses.
+                - Never invent a course.
+                - Never invent a provider.
+                - Never invent a URL.
+                - URL must point directly to the real course page.
+                - Do not return search result URLs.
+                - Do not return category pages.
+                - Do not return homepage URLs.
+                - Return only HTTPS URLs.
+                - Prefer trusted platforms such as Udemy, Coursera, edX,
+                  Microsoft Learn, AWS Skill Builder, Google Cloud Skills Boost,
+                  freeCodeCamp, or similar trusted platforms.
 
-        - Recommend only real courses.
-        - Never invent a course.
-        - Never invent a provider.
-        - Never invent a URL.
-        - URL must point directly to the real course page.
-        - Do not return search result URLs.
-        - Do not return category pages.
-        - Do not return homepage URLs.
-        - Return only HTTPS URLs.
-        - Do not return URLs that are only the platform homepage.
-        - Prefer trusted platforms such as Udemy, Coursera, edX,
-          Microsoft Learn, AWS Skill Builder, Google Cloud Skills Boost,
-          freeCodeCamp, or similar trusted platforms.
+                COURSE QUANTITY:
 
+                - Recommend exactly 5 different courses whenever possible.
+                - Every course must be relevant to the requested skill.
+                - Do not recommend the same course twice.
+                - Do not return duplicate URLs.
+                - If fewer than 5 suitable real courses can be confidently identified,
+                  return only the courses that can be verified as real.
+                - Never invent a course just to reach 5 recommendations.
 
-        COURSE QUANTITY:
+                USER PREFERENCES:
 
-        - Recommend exactly 5 different courses whenever possible.
-        - Every course must be relevant to the requested skill.
-        - Do not recommend the same course twice.
-        - Do not return duplicate URLs.
-        - If fewer than 5 suitable real courses can be confidently identified,
-          return only the courses that can be verified as real.
-        - Never invent a course just to reach 5 recommendations.
+                - Consider the user's current skill level.
+                - Consider the user's target skill level.
+                - Consider the preferred learning duration.
+                - Respect whether the user wants paid or free courses.
+                - If the user does not want paid courses, recommend only free courses.
+                - If the user wants paid courses, paid courses may be recommended.
+                - If the user wants a certificate, prioritize courses that provide
+                  a certificate.
+                - Consider the user's purpose when selecting courses.
 
+                COURSE LEVEL:
 
-        USER PREFERENCES:
+                1 = Beginner
+                2 = Intermediate
+                3 = Advanced
 
-        - Consider the user's current skill level.
-        - Consider the user's target skill level.
-        - Consider the preferred learning duration.
-        - Respect whether the user wants paid or free courses.
-        - If the user does not want paid courses, recommend only free courses.
-        - If the user wants paid courses, paid courses may be recommended.
-        - If the user wants a certificate, prioritize courses that provide
-          a certificate.
-        - Consider the user's purpose when selecting courses.
+                You MUST return only 1, 2, or 3 for the level field.
 
+                COURSE DURATION:
 
-        COURSE LEVEL:
+                - Return the estimated total learning duration in hours.
+                - DurationHours must be a positive integer.
+                - Estimate the duration based on the actual course whenever possible.
+                - Do not use weeks.
+                - Do not return 0.
 
-        1 = Beginner
-        2 = Intermediate
-        3 = Advanced
+                RECOMMENDATION REASON:
 
-        You MUST return only 1, 2, or 3 for the level field.
+                - Explain briefly why the course is suitable for this user's goal.
+                - Consider the user's current level, target level and purpose.
 
+                FINAL REQUIREMENTS:
 
-        COURSE DURATION:
-
-        - Return the estimated total learning duration in hours.
-        - DurationHours must be a positive integer.
-        - Estimate the duration based on the actual course whenever possible.
-        - Do not use weeks.
-        - Do not return 0.
-
-
-        RECOMMENDATION REASON:
-
-        - Explain briefly why the course is suitable for this user's goal.
-        - Consider the user's current level, target level and purpose.
-
-
-        FINAL REQUIREMENTS:
-
-        - Return JSON only.
-        - Follow the provided JSON schema exactly.
-        """;
+                - Return JSON only.
+                - Follow the provided JSON schema exactly.
+                """;
 
             var response = await _client.Models.GenerateContentAsync(
                 model: _options.Model,
@@ -499,7 +633,356 @@ namespace ICV.Infrastructure.Services.AiProviders
             }
         }
 
+        public async Task<AiCvAnalysisResultDto> GenerateCvAnalysisAsync(
+            CvForAiAnalysisDto cv,
+            string professionName,
+            CancellationToken cancellationToken = default)
+        {
+            if (cv == null)
+            {
+                throw new ArgumentNullException(nameof(cv));
+            }
 
+            if (string.IsNullOrWhiteSpace(professionName))
+            {
+                throw new ArgumentException(
+                    "Profession name cannot be empty.",
+                    nameof(professionName));
+            }
 
+            var analysisSchema = new Schema
+            {
+                Type = SchemaType.Object,
+
+                Properties = new Dictionary<string, Schema>
+                {
+                    {
+                        "score",
+                        new Schema
+                        {
+                            Type = SchemaType.Number,
+                            Title = "CV Score"
+                        }
+                    },
+
+                    {
+                        "summary",
+                        new Schema
+                        {
+                            Type = SchemaType.String,
+                            Title = "CV Summary"
+                        }
+                    },
+
+                    {
+                        "strengths",
+                        new Schema
+                        {
+                            Type = SchemaType.Array,
+
+                            Items = new Schema
+                            {
+                                Type = SchemaType.String
+                            }
+                        }
+                    },
+
+                    {
+                        "weaknesses",
+                        new Schema
+                        {
+                            Type = SchemaType.Array,
+
+                            Items = new Schema
+                            {
+                                Type = SchemaType.String
+                            }
+                        }
+                    },
+
+                    {
+                        "missingSkills",
+                        new Schema
+                        {
+                            Type = SchemaType.Array,
+
+                            Items = new Schema
+                            {
+                                Type = SchemaType.Object,
+
+                                Properties = new Dictionary<string, Schema>
+                                {
+                                    {
+                                        "skill",
+                                        new Schema
+                                        {
+                                            Type = SchemaType.String
+                                        }
+                                    },
+
+                                    {
+                                        "category",
+                                        new Schema
+                                        {
+                                            Type = SchemaType.String
+                                        }
+                                    },
+
+                                    {
+                                        "reason",
+                                        new Schema
+                                        {
+                                            Type = SchemaType.String
+                                        }
+                                    }
+                                },
+
+                                Required = new List<string>
+                                {
+                                    "skill",
+                                    "category",
+                                    "reason"
+                                },
+
+                                PropertyOrdering = new List<string>
+                                {
+                                    "skill",
+                                    "category",
+                                    "reason"
+                                }
+                            }
+                        }
+                    },
+
+                    {
+                        "recommendations",
+                        new Schema
+                        {
+                            Type = SchemaType.Array,
+
+                            Items = new Schema
+                            {
+                                Type = SchemaType.String
+                            }
+                        }
+                    }
+                },
+
+                Required = new List<string>
+                {
+                    "score",
+                    "summary",
+                    "strengths",
+                    "weaknesses",
+                    "missingSkills",
+                    "recommendations"
+                },
+
+                PropertyOrdering = new List<string>
+                {
+                    "score",
+                    "summary",
+                    "strengths",
+                    "weaknesses",
+                    "missingSkills",
+                    "recommendations"
+                }
+            };
+
+            var cvJson = JsonSerializer.Serialize(
+                cv,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+            var prompt = $"""
+                You are an expert career advisor, recruiter and CV analyzer.
+
+                Analyze the candidate's ENTIRE CV for the target profession.
+
+                TARGET PROFESSION:
+
+                {professionName}
+
+                IMPORTANT:
+
+                Evaluate the candidate using ALL available CV information.
+
+                Do NOT analyze only the Skills section.
+
+                Consider together:
+
+                - Profile
+                - Summary
+                - Education
+                - Experience
+                - Skills
+                - Languages
+                - Certificates
+                - Projects
+                - Dates
+                - Job responsibilities
+                - Project descriptions
+                - Technologies used
+                - Any other information contained in the CV
+
+                Evaluate how these pieces of information work together.
+
+                For example:
+
+                - Education should be considered together with experience.
+                - Skills should be compared with actual project and work experience.
+                - Technologies mentioned in projects are stronger evidence than
+                  technologies simply listed as skills.
+                - Certificates should support the candidate's claimed knowledge.
+                - Experience duration should be considered when evaluating skill level.
+                - Projects should be considered when evaluating practical experience.
+
+                Do NOT assume that a skill is strong just because it appears in
+                the Skills section.
+
+                TARGET PROFESSION ANALYSIS:
+
+                Determine how suitable the candidate currently is for the target
+                profession based on the complete CV.
+
+                SCORE:
+
+                Return a score between 0 and 100.
+
+                The score should represent the candidate's overall suitability
+                for the target profession.
+
+                Consider:
+
+                - Technical skills
+                - Relevant education
+                - Work experience
+                - Project experience
+                - Certificates
+                - Languages
+                - Practical evidence
+                - Missing important skills
+                - Overall career readiness
+
+                STRENGTHS:
+
+                Identify the candidate's strongest aspects.
+
+                Focus on meaningful strengths supported by the CV.
+
+                WEAKNESSES:
+
+                Identify actual weaknesses or gaps in the CV.
+
+                Do not invent weaknesses that cannot reasonably be inferred
+                from the provided information.
+
+                MISSING SKILLS:
+
+                Identify important skills that the candidate should develop
+                for the target profession.
+
+                Rules:
+
+                - Do not suggest skills the candidate clearly demonstrates.
+                - Consider the candidate's existing experience.
+                - Consider the candidate's projects.
+                - Consider the target profession.
+                - Avoid duplicate skills.
+                - Prioritize skills that would meaningfully improve employability.
+                - Return between 3 and 8 missing skills when possible.
+
+                Categories should be concise names such as:
+
+                Backend
+                Frontend
+                DevOps
+                Database
+                Programming
+                Cloud
+                Testing
+                Security
+                Mobile
+                AI
+                Data Science
+                Tools
+                Electronics
+                Manufacturing
+                CAD
+                Simulation
+                Quality
+                Optimization
+
+                RECOMMENDATIONS:
+
+                Provide practical recommendations for improving the candidate's
+                CV and professional readiness.
+
+                Recommendations may include:
+
+                - Skills to learn
+                - Projects to build
+                - Experience to gain
+                - Certificates to obtain
+                - CV improvements
+
+                Do not recommend something the candidate already clearly has
+                unless there is a meaningful reason to improve it.
+
+                Return ONLY the requested JSON structure.
+
+                COMPLETE CV:
+
+                {cvJson}
+                """;
+
+            var response = await _client.Models.GenerateContentAsync(
+                model: _options.Model,
+                contents: prompt,
+
+                config: new GenerateContentConfig
+                {
+                    ResponseMimeType = "application/json",
+                    ResponseSchema = analysisSchema,
+                    Temperature = 0.2
+                },
+
+                cancellationToken: cancellationToken);
+
+            var responseText = response.Text;
+
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                throw new InvalidOperationException(
+                    "Gemini returned an empty CV analysis response.");
+            }
+
+            try
+            {
+                var result =
+                    JsonSerializer.Deserialize<AiCvAnalysisResultDto>(
+                        responseText,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                if (result == null)
+                {
+                    throw new InvalidOperationException(
+                        "Gemini returned an empty CV analysis result.");
+                }
+
+                return result;
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException(
+                    "Gemini returned an invalid CV analysis JSON response.",
+                    ex);
+            }
+        }
     }
 }

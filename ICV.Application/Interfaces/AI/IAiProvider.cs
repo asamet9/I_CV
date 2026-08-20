@@ -1,9 +1,11 @@
-﻿using System;
+﻿using ICV.Application.DTOs.AI;
+using ICV.Application.DTOs.CvAnalysis;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ICV.Application.DTOs.AI;
+
 
 namespace ICV.Application.Interfaces.AI
 {
@@ -40,5 +42,14 @@ namespace ICV.Application.Interfaces.AI
         Task<IEnumerable<AiCourseRecommendationDto>> GenerateCourseRecommendationsAsync(
     AiCourseSearchRequestDto request,
     CancellationToken cancellationToken = default);
+        Task<AiCvAnalysisResultDto> GenerateCvAnalysisAsync(
+    CvForAiAnalysisDto cv,
+    string professionName,
+    CancellationToken cancellationToken = default);
+
+
+
     }
+
+
 }

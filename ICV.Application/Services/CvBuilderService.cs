@@ -9,8 +9,7 @@ namespace ICV.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
 
-
-    public CvBuilderService(IUnitOfWork unitOfWork)
+        public CvBuilderService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
         }
@@ -19,6 +18,10 @@ namespace ICV.Application.Services
             int cvId,
             int userId)
         {
+            // =====================================================
+            // 1. CV KONTROLÜ
+            // =====================================================
+
             var cv = await _unitOfWork.Cvs
                 .FirstOrDefaultAsync(x =>
                     x.Id == cvId &&
@@ -30,6 +33,11 @@ namespace ICV.Application.Services
                     "Bu CV'ye erişim yetkiniz yok.");
             }
 
+
+            // =====================================================
+            // 2. KULLANICININ CEVAPLARINI GETİR
+            // =====================================================
+
             var answers = await _unitOfWork.UserCvAnswers
                 .FindAsync(x => x.CvId == cvId);
 
@@ -39,6 +47,11 @@ namespace ICV.Application.Services
                     "Bu CV için henüz cevaplanmış soru bulunmuyor.");
             }
 
+
+            // =====================================================
+            // 3. SORULARI GETİR
+            // =====================================================
+
             var questionIds = answers
                 .Select(x => x.QuestionTemplateId)
                 .Distinct()
@@ -46,6 +59,11 @@ namespace ICV.Application.Services
 
             var questions = await _unitOfWork.QuestionTemplates
                 .FindAsync(x => questionIds.Contains(x.Id));
+
+
+            // =====================================================
+            // 4. CEVAPLARI CV YAPISINA DÖNÜŞTÜR
+            // =====================================================
 
             foreach (var answer in answers)
             {
@@ -59,17 +77,32 @@ namespace ICV.Application.Services
                 if (string.IsNullOrWhiteSpace(answer.Answer))
                     continue;
 
+
+                // =================================================
+                // 5. CATEGORY → SECTION TYPE
+                // =================================================
+
                 var sectionType = GetSectionType(
                     question.Category);
 
                 if (sectionType == null)
                     continue;
 
+
+                // =================================================
+                // 6. SECTION'I BUL / OLUŞTUR
+                // =================================================
+
                 var section = await GetOrCreateSectionAsync(
                     cvId,
                     sectionType.Value);
 
-                if (question.QuestionType == "MultiSelect")
+
+                // =================================================
+                // 7. SKILL / LANGUAGE CEVAPLARINI PARÇALA
+                // =================================================
+
+                if (ShouldSplitAnswer(question.Category))
                 {
                     var values = SplitAnswer(answer.Answer);
 
@@ -79,22 +112,37 @@ namespace ICV.Application.Services
                             section,
                             value);
                     }
-                }
-                else
-                {
-                    var title = GetItemTitle(
-                        question.Question,
-                        question.Category);
 
-                    await CreateSectionItemIfNotExistsAsync(
-                        section,
-                        title,
-                        answer.Answer);
+                    continue;
                 }
+
+
+                // =================================================
+                // 8. NORMAL CEVAPLAR
+                // =================================================
+
+                var title = GetItemTitle(
+                    question.Question,
+                    question.Category);
+
+                await CreateSectionItemIfNotExistsAsync(
+                    section,
+                    title,
+                    answer.Answer);
             }
+
+
+            // =====================================================
+            // 9. TÜM DEĞİŞİKLİKLERİ KAYDET
+            // =====================================================
 
             await _unitOfWork.SaveChangesAsync();
         }
+
+
+        // =========================================================
+        // CATEGORY → CV SECTION TYPE
+        // =========================================================
 
         private static CvSectionType? GetSectionType(
             string? category)
@@ -125,6 +173,34 @@ namespace ICV.Application.Services
             };
         }
 
+
+        // =========================================================
+        // HANGİ CEVAPLAR PARÇALANACAK?
+        // =========================================================
+
+        private static bool ShouldSplitAnswer(
+            string? category)
+        {
+            if (string.IsNullOrWhiteSpace(category))
+                return false;
+
+            return category switch
+            {
+                "Programming" => true,
+                "Database" => true,
+                "Tools" => true,
+                "DevOps" => true,
+                "Language" => true,
+
+                _ => false
+            };
+        }
+
+
+        // =========================================================
+        // SECTION BUL / OLUŞTUR
+        // =========================================================
+
         private async Task<CvSection> GetOrCreateSectionAsync(
             int cvId,
             CvSectionType sectionType)
@@ -137,6 +213,7 @@ namespace ICV.Application.Services
             if (section != null)
                 return section;
 
+
             var existingSections = await _unitOfWork.CvSections
                 .FindAsync(x => x.CvId == cvId);
 
@@ -144,12 +221,14 @@ namespace ICV.Application.Services
                 ? existingSections.Max(x => x.OrderIndex) + 1
                 : 1;
 
+
             section = new CvSection
             {
                 CvId = cvId,
                 Type = sectionType,
                 OrderIndex = nextOrderIndex
             };
+
 
             await _unitOfWork.CvSections
                 .AddAsync(section);
@@ -159,6 +238,11 @@ namespace ICV.Application.Services
             return section;
         }
 
+
+        // =========================================================
+        // SECTION ITEM OLUŞTUR
+        // =========================================================
+
         private async Task CreateSectionItemIfNotExistsAsync(
             CvSection section,
             string title,
@@ -167,25 +251,42 @@ namespace ICV.Application.Services
             if (string.IsNullOrWhiteSpace(title))
                 return;
 
-            var existingItem = await _unitOfWork.CvSectionItems
-                .FirstOrDefaultAsync(x =>
-                    x.CvSectionId == section.Id &&
-                    x.Title == title &&
-                    x.Description == description);
+
+            var normalizedTitle = title.Trim();
+
+            var existingItems = await _unitOfWork.CvSectionItems
+                .FindAsync(x =>
+                    x.CvSectionId == section.Id);
+
+
+            var existingItem = existingItems
+                .FirstOrDefault(x =>
+                    string.Equals(
+                        x.Title.Trim(),
+                        normalizedTitle,
+                        StringComparison.OrdinalIgnoreCase));
+
 
             if (existingItem != null)
                 return;
 
+
             var item = new CvSectionItem
             {
                 CvSectionId = section.Id,
-                Title = title.Trim(),
+                Title = normalizedTitle,
                 Description = description?.Trim()
             };
+
 
             await _unitOfWork.CvSectionItems
                 .AddAsync(item);
         }
+
+
+        // =========================================================
+        // CEVABI PARÇALA
+        // =========================================================
 
         private static IEnumerable<string> SplitAnswer(
             string? answer)
@@ -202,6 +303,11 @@ namespace ICV.Application.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase);
         }
 
+
+        // =========================================================
+        // NORMAL CEVAPLAR İÇİN ITEM BAŞLIĞI
+        // =========================================================
+
         private static string GetItemTitle(
             string question,
             string? category)
@@ -213,12 +319,14 @@ namespace ICV.Application.Services
                 return "Üniversite";
             }
 
+
             if (question.Contains(
                 "bölümünüz",
                 StringComparison.OrdinalIgnoreCase))
             {
                 return "Bölüm";
             }
+
 
             if (question.Contains(
                 "şirket veya kurum adı",
@@ -227,12 +335,14 @@ namespace ICV.Application.Services
                 return "Şirket";
             }
 
+
             if (question.Contains(
                 "pozisyonunuz",
                 StringComparison.OrdinalIgnoreCase))
             {
                 return "Pozisyon";
             }
+
 
             if (question.Contains(
                 "proje adı",
@@ -241,12 +351,14 @@ namespace ICV.Application.Services
                 return "Proje";
             }
 
+
             if (question.Contains(
                 "sertifika adı",
                 StringComparison.OrdinalIgnoreCase))
             {
                 return "Sertifika";
             }
+
 
             if (question.Contains(
                 "sorumluluklarınız",
@@ -255,12 +367,14 @@ namespace ICV.Application.Services
                 return "Sorumluluklar";
             }
 
+
             if (question.Contains(
                 "projeyi kısaca açıklayın",
                 StringComparison.OrdinalIgnoreCase))
             {
                 return "Açıklama";
             }
+
 
             if (question.Contains(
                 "projede kullandığınız teknolojileri",
@@ -269,6 +383,7 @@ namespace ICV.Application.Services
                 return "Teknolojiler";
             }
 
+
             if (question.Contains(
                 "sertifikayı veren kurum",
                 StringComparison.OrdinalIgnoreCase))
@@ -276,8 +391,8 @@ namespace ICV.Application.Services
                 return "Veren Kurum";
             }
 
+
             return category ?? "Bilgi";
         }
     }
-
 }

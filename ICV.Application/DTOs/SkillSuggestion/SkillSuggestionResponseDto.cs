@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using ICV.Domain.Enums;
+﻿using ICV.Domain.Enums;
 
 namespace ICV.Application.DTOs.SkillSuggestion
 {

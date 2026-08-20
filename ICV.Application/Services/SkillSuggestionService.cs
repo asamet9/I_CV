@@ -1,45 +1,40 @@
 ﻿using ICV.Application.DTOs.CvAnalysis;
 using ICV.Application.DTOs.SkillSuggestion;
-using ICV.Application.Interfaces.AI; // IAiProvider interface'ine erişmemizi sağlar.
+using ICV.Application.Interfaces.AI;
 using ICV.Application.Interfaces.Services;
 using ICV.Application.Interfaces.UnitOfWork;
 using ICV.Domain.Entities;
 using ICV.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ICV.Application.Services
 {
     public class SkillSuggestionService : ISkillSuggestionService
     {
-
-        private readonly IUnitOfWork _unitOfWork; // Veritabanı işlemlerini yöneten UnitOfWork nesnesidir.
-        private readonly IAiProvider _aiProvider; // AI işlemlerini gerçekleştiren provider'ı tutar.
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IAiProvider _aiProvider;
 
         public SkillSuggestionService(
             IUnitOfWork unitOfWork,
             IAiProvider aiProvider)
         {
-            _unitOfWork = unitOfWork; // Dependency Injection tarafından verilen UnitOfWork'ü saklar.
-            _aiProvider = aiProvider; // Dependency Injection tarafından verilen AI provider'ı saklar.
+            _unitOfWork = unitOfWork;
+            _aiProvider = aiProvider;
         }
 
         public async Task<SkillSuggestionResponseDto> CreateAsync(
             CreateSkillSuggestionRequestDto request,
             int userId)
         {
-            // CV'nin giriş yapan kullanıcıya ait olup olmadığını kontrol ediyoruz.
             var cv = await _unitOfWork.Cvs
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.CvId &&
                     x.UserId == userId);
 
             if (cv == null)
+            {
                 throw new UnauthorizedAccessException(
                     "Bu CV'ye erişim yetkiniz yok.");
+            }
 
             var suggestion = new SkillSuggestion
             {
@@ -50,50 +45,31 @@ namespace ICV.Application.Services
                 Status = (SuggestionStatus)request.Status
             };
 
-            await _unitOfWork.SkillSuggestions
-                .AddAsync(suggestion);
-
+            await _unitOfWork.SkillSuggestions.AddAsync(suggestion);
             await _unitOfWork.SaveChangesAsync();
 
-            return new SkillSuggestionResponseDto
-            {
-                Id = suggestion.Id,
-                CvId = suggestion.CvId,
-                SuggestedSkill = suggestion.SuggestedSkill,
-                Reason = suggestion.Reason,
-                Category = suggestion.Category,
-                Status = (int)suggestion.Status,
-                CreatedAt = suggestion.CreatedAt
-            };
+            return MapToDto(suggestion);
         }
 
         public async Task<IEnumerable<SkillSuggestionResponseDto>> GetAllAsync(
             int cvId,
             int userId)
         {
-            // Sadece kullanıcının kendi CV'sine ait önerileri getiriyoruz.
             var cv = await _unitOfWork.Cvs
                 .FirstOrDefaultAsync(x =>
                     x.Id == cvId &&
                     x.UserId == userId);
 
             if (cv == null)
+            {
                 throw new UnauthorizedAccessException(
                     "Bu CV'ye erişim yetkiniz yok.");
+            }
 
             var suggestions = await _unitOfWork.SkillSuggestions
                 .FindAsync(x => x.CvId == cvId);
 
-            return suggestions.Select(x => new SkillSuggestionResponseDto
-            {
-                Id = x.Id,
-                CvId = x.CvId,
-                SuggestedSkill = x.SuggestedSkill,
-                Reason = x.Reason,
-                Category = x.Category,
-                Status = (int)x.Status,
-                CreatedAt = x.CreatedAt
-            });
+            return suggestions.Select(MapToDto);
         }
 
         public async Task<SkillSuggestionResponseDto?> GetByIdAsync(
@@ -108,16 +84,7 @@ namespace ICV.Application.Services
             if (suggestion == null)
                 return null;
 
-            return new SkillSuggestionResponseDto
-            {
-                Id = suggestion.Id,
-                CvId = suggestion.CvId,
-                SuggestedSkill = suggestion.SuggestedSkill,
-                Reason = suggestion.Reason,
-                Category = suggestion.Category,
-                Status = (int)suggestion.Status,
-                CreatedAt = suggestion.CreatedAt
-            };
+            return MapToDto(suggestion);
         }
 
         public async Task<SkillSuggestionResponseDto?> UpdateAsync(
@@ -142,16 +109,7 @@ namespace ICV.Application.Services
 
             await _unitOfWork.SaveChangesAsync();
 
-            return new SkillSuggestionResponseDto
-            {
-                Id = suggestion.Id,
-                CvId = suggestion.CvId,
-                SuggestedSkill = suggestion.SuggestedSkill,
-                Reason = suggestion.Reason,
-                Category = suggestion.Category,
-                Status = (int)suggestion.Status,
-                CreatedAt = suggestion.CreatedAt
-            };
+            return MapToDto(suggestion);
         }
 
         public async Task<bool> DeleteAsync(
@@ -173,58 +131,140 @@ namespace ICV.Application.Services
             return true;
         }
 
-        // CV analizinde eksik bulunan yetenekleri otomatik olarak
-        // SkillSuggestion kayıtlarına dönüştürür.
         public async Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAnalysisAsync(
             int cvId,
             IEnumerable<MissingSkillDto> missingSkills,
             int userId)
         {
-            // CV'nin giriş yapan kullanıcıya ait olup olmadığını kontrol ediyoruz.
             var cv = await _unitOfWork.Cvs
                 .FirstOrDefaultAsync(x =>
                     x.Id == cvId &&
                     x.UserId == userId);
 
             if (cv == null)
+            {
                 throw new UnauthorizedAccessException(
                     "Bu CV'ye erişim yetkiniz yok.");
+            }
 
-            // Oluşturacağımız önerileri burada tutacağız.
             var suggestions = new List<SkillSuggestion>();
 
-            // Analiz sonucunda bulunan her eksik skill için
-            // ayrı bir SkillSuggestion oluşturuyoruz.
             foreach (var skill in missingSkills)
             {
-                // Skill boşsa kaydetmiyoruz.
                 if (string.IsNullOrWhiteSpace(skill.Skill))
                     continue;
 
-                // Aynı skill daha önce bu CV için önerilmişse
-                // tekrar kayıt oluşturmuyoruz.
-                var suggestionExists = await _unitOfWork.SkillSuggestions
+                var exists = await _unitOfWork.SkillSuggestions
                     .AnyAsync(x =>
                         x.CvId == cvId &&
                         x.SuggestedSkill == skill.Skill);
 
-                if (suggestionExists)
+                if (exists)
                     continue;
 
-                // Eksik skill için yeni öneri oluşturuyoruz.
+                var suggestion = new SkillSuggestion
+                {
+                    CvId = cvId,
+                    SuggestedSkill = skill.Skill,
+                    Reason =
+                        "Bu yetenek seçilen meslek için gelişim açısından faydalıdır.",
+                    Category = skill.Category,
+                    Status = SuggestionStatus.Pending
+                };
+
+                suggestions.Add(suggestion);
+            }
+
+            foreach (var suggestion in suggestions)
+            {
+                await _unitOfWork.SkillSuggestions
+                    .AddAsync(suggestion);
+            }
+
+            if (suggestions.Count > 0)
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return suggestions.Select(MapToDto);
+        }
+
+        public async Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAiAsync(
+            int cvId,
+            string cvContent,
+            string professionName,
+            int userId)
+        {
+            var cv = await _unitOfWork.Cvs
+                .FirstOrDefaultAsync(x =>
+                    x.Id == cvId &&
+                    x.UserId == userId);
+
+            if (cv == null)
+            {
+                throw new UnauthorizedAccessException(
+                    "Bu CV'ye erişim yetkiniz yok.");
+            }
+
+            if (string.IsNullOrWhiteSpace(cvContent))
+            {
+                throw new ArgumentException(
+                    "CV içeriği boş olamaz.",
+                    nameof(cvContent));
+            }
+
+            if (string.IsNullOrWhiteSpace(professionName))
+            {
+                throw new ArgumentException(
+                    "Meslek bilgisi boş olamaz.",
+                    nameof(professionName));
+            }
+
+            // ---------------------------------------------------------
+            // AI'YA CV'Yİ GÖNDER
+            // ---------------------------------------------------------
+
+            var aiSuggestions =
+                await _aiProvider.GenerateSkillSuggestionsAsync(
+                    cvContent,
+                    professionName);
+
+            var suggestions = new List<SkillSuggestion>();
+
+            // ---------------------------------------------------------
+            // AI ÖNERİLERİNİ DB'YE KAYDET
+            // ---------------------------------------------------------
+
+            foreach (var aiSuggestion in aiSuggestions)
+            {
+                if (string.IsNullOrWhiteSpace(aiSuggestion.Skill))
+                    continue;
+
+                var skillName = aiSuggestion.Skill.Trim();
+
+                var exists = await _unitOfWork.SkillSuggestions
+                    .AnyAsync(x =>
+                        x.CvId == cvId &&
+                        x.SuggestedSkill.ToLower() ==
+                        skillName.ToLower());
+
+                if (exists)
+                    continue;
+
                 var suggestion = new SkillSuggestion
                 {
                     CvId = cvId,
 
-                    // MissingSkillDto içerisindeki gerçek skill.
-                    SuggestedSkill = skill.Skill,
+                    SuggestedSkill = skillName,
 
-                    Reason =
-                        "Bu yetenek seçilen meslek için gerekli ancak CV'de bulunamadı.",
+                    Reason = string.IsNullOrWhiteSpace(aiSuggestion.Reason)
+                        ? "Bu skill adayın kariyer gelişimi için önerilmiştir."
+                        : aiSuggestion.Reason,
 
-                    // Artık sabit "Technical" kullanmıyoruz.
-                    // QuestionTemplate'dan gelen kategori kullanılıyor.
-                    Category = skill.Category,
+                    Category = aiSuggestion.Category,
+
+                    RecommendedTargetLevel =
+                        aiSuggestion.RecommendedTargetLevel,
 
                     Status = SuggestionStatus.Pending
                 };
@@ -232,135 +272,35 @@ namespace ICV.Application.Services
                 suggestions.Add(suggestion);
             }
 
-            // Yeni oluşturulan önerilerin tamamını veritabanına ekliyoruz.
             foreach (var suggestion in suggestions)
             {
                 await _unitOfWork.SkillSuggestions
                     .AddAsync(suggestion);
             }
 
-            // Tüm yeni kayıtları kaydediyoruz.
-            await _unitOfWork.SaveChangesAsync();
-
-            // Entity'leri DTO'lara çeviriyoruz.
-            return suggestions.Select(x => new SkillSuggestionResponseDto
+            if (suggestions.Count > 0)
             {
-                Id = x.Id,
-                CvId = x.CvId,
-                SuggestedSkill = x.SuggestedSkill,
-                Reason = x.Reason,
-                Category = x.Category,
-                Status = (int)x.Status,
-                CreatedAt = x.CreatedAt
-            });
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return suggestions.Select(MapToDto);
         }
 
-        // Gemini AI tarafından oluşturulan skill önerilerini
-        // SkillSuggestion kayıtlarına dönüştürür.
-        public async Task<IEnumerable<SkillSuggestionResponseDto>> GenerateFromAiAsync(
-            int cvId,
-            string cvContent,
-            string professionName,
-            int userId)
+        private static SkillSuggestionResponseDto MapToDto(
+            SkillSuggestion suggestion)
         {
-            // CV'nin giriş yapan kullanıcıya ait olup olmadığını kontrol ediyoruz.
-            var cv = await _unitOfWork.Cvs
-                .FirstOrDefaultAsync(x =>
-                    x.Id == cvId &&
-                    x.UserId == userId);
-
-            // CV bulunamadıysa veya kullanıcı bu CV'ye ait değilse işlemi durduruyoruz.
-            if (cv == null)
-                throw new UnauthorizedAccessException(
-                    "Bu CV'ye erişim yetkiniz yok.");
-
-            // CV içeriğinin boş olup olmadığını kontrol ediyoruz.
-            if (string.IsNullOrWhiteSpace(cvContent))
-                throw new ArgumentException(
-                    "CV içeriği boş olamaz.",
-                    nameof(cvContent));
-
-            // Meslek bilgisinin boş olup olmadığını kontrol ediyoruz.
-            if (string.IsNullOrWhiteSpace(professionName))
-                throw new ArgumentException(
-                    "Meslek bilgisi boş olamaz.",
-                    nameof(professionName));
-
-            // AI provider'a CV'yi ve mesleği gönderiyoruz.
-            // Burada GeminiAiProvider kullanıldığını service bilmiyor.
-            var aiSuggestions = await _aiProvider
-                .GenerateSkillSuggestionsAsync(
-                    cvContent,
-                    professionName);
-
-            // AI'dan gelen önerileri SkillSuggestion entity'lerine
-            // dönüştürmeden önce burada tutacağız.
-            var suggestions = new List<SkillSuggestion>();
-
-            // Gemini'nin döndürdüğü her skill önerisini işliyoruz.
-            foreach (var aiSuggestion in aiSuggestions)
+            return new SkillSuggestionResponseDto
             {
-                // Skill boşsa bu öneriyi veritabanına kaydetmiyoruz.
-                if (string.IsNullOrWhiteSpace(aiSuggestion.Skill))
-                    continue;
-
-                // Aynı skill daha önce bu CV için önerilmişse
-                // duplicate kayıt oluşturmuyoruz.
-                var suggestionExists = await _unitOfWork.SkillSuggestions
-                    .AnyAsync(x =>
-                        x.CvId == cvId &&
-                        x.SuggestedSkill == aiSuggestion.Skill);
-
-                // Skill zaten varsa bir sonraki öneriye geçiyoruz.
-                if (suggestionExists)
-                    continue;
-
-                // AI önerisini Domain entity'sine dönüştürüyoruz.
-                var suggestion = new SkillSuggestion
-                {
-                    CvId = cvId, // Önerinin hangi CV'ye ait olduğunu belirtir.
-
-                    SuggestedSkill = aiSuggestion.Skill, // Gemini'nin önerdiği skill'i kaydeder.
-
-                    Reason = aiSuggestion.Reason, // Gemini'nin skill'i neden önerdiğini kaydeder.
-
-                    Category = aiSuggestion.Category, // Gemini'nin belirlediği kategoriyi kaydeder.
-
-                    Status = SuggestionStatus.Pending // Yeni AI önerilerinin başlangıç durumudur.
-                };
-
-                // Oluşturduğumuz entity'yi geçici listeye ekliyoruz.
-                suggestions.Add(suggestion);
-            }
-
-            // Oluşturulan tüm skill önerilerini veritabanına ekliyoruz.
-            foreach (var suggestion in suggestions)
-            {
-                await _unitOfWork.SkillSuggestions
-                    .AddAsync(suggestion);
-            }
-
-            // Tüm yeni SkillSuggestion kayıtlarını tek seferde kaydediyoruz.
-            await _unitOfWork.SaveChangesAsync();
-
-            // Domain entity'lerini API'nin kullanacağı response DTO'larına dönüştürüyoruz.
-            return suggestions.Select(x => new SkillSuggestionResponseDto
-            {
-                Id = x.Id, // Veritabanında oluşturulan ID'yi döndürür.
-
-                CvId = x.CvId, // Önerinin ait olduğu CV ID'sini döndürür.
-
-                SuggestedSkill = x.SuggestedSkill, // Önerilen skill'i döndürür.
-
-                Reason = x.Reason, // Skill'in önerilme nedenini döndürür.
-
-                Category = x.Category, // Skill kategorisini döndürür.
-
-                Status = (int)x.Status, // Enum değerini API response'una integer olarak aktarır.
-
-                CreatedAt = x.CreatedAt // Kaydın oluşturulma tarihini döndürür.
-            });
+                Id = suggestion.Id,
+                CvId = suggestion.CvId,
+                SuggestedSkill = suggestion.SuggestedSkill,
+                Reason = suggestion.Reason,
+                Category = suggestion.Category,
+                RecommendedTargetLevel =
+                    suggestion.RecommendedTargetLevel,
+                Status = (int)suggestion.Status,
+                CreatedAt = suggestion.CreatedAt
+            };
         }
-
     }
 }
