@@ -1,21 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ICV.Application.Interfaces.Services
+﻿namespace ICV.Application.Interfaces.Services
 {
     public interface IFileStorageService
     {
-        Task<string> SaveAsync(
+        Task<(string storedFileName, string storagePath)> SaveAsync(
             Stream fileStream,
-            string fileName,
-            int userId,
-            CancellationToken cancellationToken = default);
+            string originalFileName);
 
-        Task DeleteAsync(
-            string storagePath,
-            CancellationToken cancellationToken = default);
+        Task DeleteAsync(string storagePath);
     }
 }

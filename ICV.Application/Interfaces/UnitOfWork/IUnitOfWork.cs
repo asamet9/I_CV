@@ -37,6 +37,8 @@ namespace ICV.Application.Interfaces.UnitOfWork
         ICourseRepository Courses { get; }
         IGenericRepository<QuestionOption> QuestionOptions { get; }
 
+        ICvFileRepository CvFiles { get; }
+
         Task<int> SaveChangesAsync();
         void Dispose();
 

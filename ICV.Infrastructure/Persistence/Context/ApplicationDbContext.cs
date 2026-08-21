@@ -26,6 +26,9 @@ namespace ICV.Infrastructure.Persistence.Context
 
         public DbSet<Cv> Cvs { get; set; }
 
+        public DbSet<CvFile> CvFiles { get; set; }
+
+    
         public DbSet<CvSection> CvSections { get; set; }
 
         public DbSet<CvSectionItem> CvSectionItems { get; set; }

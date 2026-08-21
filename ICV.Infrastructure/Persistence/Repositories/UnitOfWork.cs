@@ -27,8 +27,9 @@ namespace ICV.Infrastructure.Persistence.Repositories
 
         public IUserSkillProgressRepository UserSkillProgresses { get; }
 
-        
-public IGenericRepository<UserCvAnswer> UserCvAnswers { get; }
+        public ICvFileRepository CvFiles { get; }
+
+        public IGenericRepository<UserCvAnswer> UserCvAnswers { get; }
 
 
         public ICvAnalysisRepository CvAnalyses { get; }
@@ -51,10 +52,13 @@ public IGenericRepository<UserCvAnswer> UserCvAnswers { get; }
             IQuestionTemplateRepository questionTemplateRepository,
             IUserSkillProgressRepository userSkillProgressRepository,
             ICvAnalysisRepository cvAnalysisRepository,
+            ICvFileRepository cvFileRepository,
             ICourseRepository courseRepository,
             IGenericRepository<SkillDevelopmentGoal>
                 skillDevelopmentGoalRepository)
         {
+            CvFiles = cvFileRepository;
+
             _context = context;
 
             Users =

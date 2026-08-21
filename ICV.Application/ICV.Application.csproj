@@ -23,6 +23,7 @@
     <Folder Include="Features\Analysis\" />
     <Folder Include="Features\Export\" />
     <Folder Include="Features\Skills\" />
+    <Folder Include="Services\FileStorage\" />
   </ItemGroup>
 
   <ItemGroup>

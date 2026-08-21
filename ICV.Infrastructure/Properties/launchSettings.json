@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "ICV.Infrastructure": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54674;http://localhost:54675"
+    }
+  }
+}
