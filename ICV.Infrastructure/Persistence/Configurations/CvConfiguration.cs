@@ -38,7 +38,10 @@ namespace ICV.Infrastructure.Persistence.Configurations
 
             builder.HasMany(x => x.SkillSuggestions).WithOne(x => x.Cv).HasForeignKey(x => x.CvId).OnDelete(DeleteBehavior.Cascade);
 
-
+            builder.HasOne(x => x.File)
+    .WithOne(x => x.Cv)
+    .HasForeignKey<CvFile>(x => x.CvId)
+    .OnDelete(DeleteBehavior.Cascade);
 
 
 

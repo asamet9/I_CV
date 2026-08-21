@@ -37,5 +37,7 @@ namespace ICV.Domain.Entities
 
         // AI'nin oluşturduğu öneriler
         public ICollection<SkillSuggestion> SkillSuggestions { get; set; } = new List<SkillSuggestion>();
+
+        public CvFile? File { get; set; }
     }
 }

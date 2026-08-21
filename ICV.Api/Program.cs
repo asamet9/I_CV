@@ -1,6 +1,7 @@
 using ICV.Application.Interfaces.AI;
 using ICV.Application.Interfaces.Repositories;
 using ICV.Application.Interfaces.Services;
+using ICV.Application.Interfaces.Services;
 using ICV.Application.Interfaces.UnitOfWork;
 using ICV.Application.Services;
 using ICV.Infrastructure.Configuration;
@@ -8,6 +9,9 @@ using ICV.Infrastructure.Persistence.Context;
 using ICV.Infrastructure.Persistence.Repositories;
 using ICV.Infrastructure.Services;
 using ICV.Infrastructure.Services.AiProviders;
+using ICV.Infrastructure.Services.FileParsing;
+using ICV.Infrastructure.Services.FileParsing;
+using ICV.Infrastructure.Services.FileStorage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -111,6 +115,9 @@ builder.Services.AddScoped<ICourseRecommendationService, CourseRecommendationSer
 builder.Services.AddScoped<IUserSkillProgressService, UserSkillProgressService>();
 builder.Services.AddScoped<IUserCvAnswerService, UserCvAnswerService>();
 builder.Services.AddScoped<ICvBuilderService, CvBuilderService>();
+builder.Services.AddScoped<IPdfTextExtractor, PdfTextExtractor>();
+builder.Services.AddScoped<IDocxTextExtractor, DocxTextExtractor>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 builder.Services.AddScoped<ICvAnalysisService, CvAnalysisService>();
 
