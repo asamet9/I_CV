@@ -11,8 +11,8 @@ namespace ICV.Application.Interfaces.Services
     public interface ICvImportService
     {
         Task<ImportedCvDto> ImportAsync(
-              ImportCvRequestDto request,
-              int userId,
-              CancellationToken cancellationToken = default);
+            ImportCvRequestDto request,
+            int userId,
+            CancellationToken cancellationToken = default);
     }
 }

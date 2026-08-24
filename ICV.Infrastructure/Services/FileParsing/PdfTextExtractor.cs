@@ -1,43 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using ICV.Application.Interfaces.Services;
+﻿using ICV.Application.Interfaces.Services;
 using UglyToad.PdfPig;
+using System.Text;
 
 namespace ICV.Infrastructure.Services.FileParsing
 {
     public class PdfTextExtractor : IPdfTextExtractor
     {
-        public Task<string> ExtractTextAsync(
+        public async Task<string> ExtractTextAsync(
             Stream fileStream,
             CancellationToken cancellationToken = default)
         {
             if (fileStream == null)
+            {
                 throw new ArgumentNullException(nameof(fileStream));
+            }
 
             if (!fileStream.CanRead)
-                throw new InvalidOperationException("PDF file stream is not readable.");
+            {
+                throw new InvalidOperationException(
+                    "PDF file stream cannot be read.");
+            }
 
-            fileStream.Position = 0;
+            if (fileStream.CanSeek)
+            {
+                fileStream.Position = 0;
+            }
+
+            var text = new StringBuilder();
 
             using var document = PdfDocument.Open(fileStream);
 
-            var pages = document.GetPages();
-
-            var text = string.Join(
-                Environment.NewLine,
-                pages.Select(page => page.Text));
-
-            if (string.IsNullOrWhiteSpace(text))
+            foreach (var page in document.GetPages())
             {
-                throw new InvalidOperationException(
-                    "No readable text could be extracted from the PDF.");
+                cancellationToken.ThrowIfCancellationRequested();
+
+                text.AppendLine(page.Text);
             }
 
-            return Task.FromResult(text);
+            await Task.CompletedTask;
+
+            return text.ToString().Trim();
         }
     }
 }

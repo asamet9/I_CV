@@ -6,6 +6,7 @@ using ICV.Application.Interfaces.AI;
 using ICV.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using ICV.Application.DTOs.CvImport;
 
 using SchemaType = Google.GenAI.Types.Type;
 
@@ -981,6 +982,481 @@ namespace ICV.Infrastructure.Services.AiProviders
             {
                 throw new InvalidOperationException(
                     "Gemini returned an invalid CV analysis JSON response.",
+                    ex);
+            }
+        }
+        public async Task<ParsedCvDto> ParseCvAsync(
+    string cvText,
+    CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(cvText))
+            {
+                throw new ArgumentException(
+                    "CV text cannot be empty.",
+                    nameof(cvText));
+            }
+
+            var parsedCvSchema = new Schema
+            {
+                Type = SchemaType.Object,
+
+                Properties = new Dictionary<string, Schema>
+        {
+            {
+                "summary",
+                new Schema
+                {
+                    Type = SchemaType.String,
+                    Nullable = true
+                }
+            },
+
+            {
+                "education",
+                new Schema
+                {
+                    Type = SchemaType.Array,
+                    Items = new Schema
+                    {
+                        Type = SchemaType.Object,
+
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            {
+                                "title",
+                                new Schema
+                                {
+                                    Type = SchemaType.String
+                                }
+                            },
+                            {
+                                "description",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "startDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "endDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            }
+                        },
+
+                        Required = new List<string>
+                        {
+                            "title",
+                            "description",
+                            "startDate",
+                            "endDate"
+                        }
+                    }
+                }
+            },
+
+            {
+                "experience",
+                new Schema
+                {
+                    Type = SchemaType.Array,
+                    Items = new Schema
+                    {
+                        Type = SchemaType.Object,
+
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            {
+                                "title",
+                                new Schema
+                                {
+                                    Type = SchemaType.String
+                                }
+                            },
+                            {
+                                "description",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "startDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "endDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            }
+                        },
+
+                        Required = new List<string>
+                        {
+                            "title",
+                            "description",
+                            "startDate",
+                            "endDate"
+                        }
+                    }
+                }
+            },
+
+            {
+                "skills",
+                new Schema
+                {
+                    Type = SchemaType.Array,
+                    Items = new Schema
+                    {
+                        Type = SchemaType.Object,
+
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            {
+                                "name",
+                                new Schema
+                                {
+                                    Type = SchemaType.String
+                                }
+                            }
+                        },
+
+                        Required = new List<string>
+                        {
+                            "name"
+                        }
+                    }
+                }
+            },
+
+            {
+                "languages",
+                new Schema
+                {
+                    Type = SchemaType.Array,
+                    Items = new Schema
+                    {
+                        Type = SchemaType.Object,
+
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            {
+                                "name",
+                                new Schema
+                                {
+                                    Type = SchemaType.String
+                                }
+                            },
+                            {
+                                "level",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            }
+                        },
+
+                        Required = new List<string>
+                        {
+                            "name",
+                            "level"
+                        }
+                    }
+                }
+            },
+
+            {
+                "certificates",
+                new Schema
+                {
+                    Type = SchemaType.Array,
+                    Items = new Schema
+                    {
+                        Type = SchemaType.Object,
+
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            {
+                                "title",
+                                new Schema
+                                {
+                                    Type = SchemaType.String
+                                }
+                            },
+                            {
+                                "description",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "startDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            }
+                        },
+
+                        Required = new List<string>
+                        {
+                            "title",
+                            "description",
+                            "startDate"
+                        }
+                    }
+                }
+            },
+
+            {
+                "projects",
+                new Schema
+                {
+                    Type = SchemaType.Array,
+                    Items = new Schema
+                    {
+                        Type = SchemaType.Object,
+
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            {
+                                "title",
+                                new Schema
+                                {
+                                    Type = SchemaType.String
+                                }
+                            },
+                            {
+                                "description",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "startDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            },
+                            {
+                                "endDate",
+                                new Schema
+                                {
+                                    Type = SchemaType.String,
+                                    Nullable = true
+                                }
+                            }
+                        },
+
+                        Required = new List<string>
+                        {
+                            "title",
+                            "description",
+                            "startDate",
+                            "endDate"
+                        }
+                    }
+                }
+            }
+        },
+
+                Required = new List<string>
+        {
+            "summary",
+            "education",
+            "experience",
+            "skills",
+            "languages",
+            "certificates",
+            "projects"
+        },
+
+                PropertyOrdering = new List<string>
+        {
+            "summary",
+            "education",
+            "experience",
+            "skills",
+            "languages",
+            "certificates",
+            "projects"
+        }
+            };
+
+            var prompt = $"""
+        You are an expert CV parser and recruitment specialist.
+
+        Your task is to extract structured information from the CV text below.
+
+        IMPORTANT RULES:
+
+        - Extract ONLY information that is actually present in the CV.
+        - Never invent information.
+        - Never guess missing dates.
+        - Never invent companies, schools, projects, certificates or skills.
+        - Preserve the meaning of the original CV.
+        - If information is missing, use null.
+        - Do not add information based on what is common for the profession.
+        - Do not generate career recommendations.
+        - This task is ONLY CV information extraction.
+
+        SUMMARY:
+
+        Extract the candidate's profile/summary if one exists.
+
+        EDUCATION:
+
+        Extract each education record.
+
+        Examples:
+
+        - University
+        - Faculty
+        - Department
+        - Degree
+        - High school
+
+        TITLE should contain the institution/degree/department information
+        in a useful concise form.
+
+        EXPERIENCE:
+
+        Extract each work experience or internship.
+
+        TITLE should contain the job title and/or company information.
+
+        DESCRIPTION should contain the responsibilities and relevant details.
+
+        SKILLS:
+
+        Extract explicitly mentioned technical and professional skills.
+
+        Examples:
+
+        - C#
+        - ASP.NET Core
+        - SQL Server
+        - AutoCAD
+        - SolidWorks
+
+        Do not invent skills.
+
+        LANGUAGES:
+
+        Extract languages mentioned in the CV.
+
+        If a proficiency level is explicitly stated, include it.
+
+        Examples:
+
+        - English - B2
+        - German - Intermediate
+
+        CERTIFICATES:
+
+        Extract certificates explicitly mentioned in the CV.
+
+        PROJECTS:
+
+        Extract projects explicitly mentioned in the CV.
+
+        Include useful project descriptions and technologies when available.
+
+        DATES:
+
+        Dates should be returned as ISO-compatible date strings when possible.
+
+        Examples:
+
+        2024-09-01
+        2025-06-30
+
+        If only a year is available, use:
+
+        2024-01-01
+
+        If no date is available, return null.
+
+        OUTPUT:
+
+        Return ONLY the JSON structure defined by the provided schema.
+
+        CV TEXT:
+
+        {cvText}
+        """;
+
+            var response = await _client.Models.GenerateContentAsync(
+                model: _options.Model,
+                contents: prompt,
+
+                config: new GenerateContentConfig
+                {
+                    ResponseMimeType = "application/json",
+                    ResponseSchema = parsedCvSchema,
+                    Temperature = 0.1
+                },
+
+                cancellationToken: cancellationToken);
+
+            var responseText = response.Text;
+
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                throw new InvalidOperationException(
+                    "Gemini returned an empty CV parsing response.");
+            }
+
+            try
+            {
+                var result =
+                    JsonSerializer.Deserialize<ParsedCvDto>(
+                        responseText,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                if (result == null)
+                {
+                    throw new InvalidOperationException(
+                        "Gemini returned an empty parsed CV result.");
+                }
+
+                return result;
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException(
+                    "Gemini returned an invalid CV parsing JSON response.",
                     ex);
             }
         }

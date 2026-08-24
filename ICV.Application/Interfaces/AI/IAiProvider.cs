@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ICV.Application.DTOs.CvImport;
 
 
 namespace ICV.Application.Interfaces.AI
@@ -47,7 +48,9 @@ namespace ICV.Application.Interfaces.AI
     string professionName,
     CancellationToken cancellationToken = default);
 
-
+        Task<ParsedCvDto> ParseCvAsync(
+    string cvText,
+    CancellationToken cancellationToken = default);
 
     }
 
